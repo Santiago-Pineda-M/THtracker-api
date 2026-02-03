@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using THtracker.Application.DTOs;
+using THtracker.Infrastructure.Persistence;
 
 namespace THtracker.API.Controllers;
 
@@ -7,18 +9,24 @@ namespace THtracker.API.Controllers;
 [Route("api/v1/users")]
 public class UsersController : ControllerBase
 {
-    [HttpGet]
-    public IActionResult Get()
+    private readonly AppDbContext _context;
+
+    public UsersController(AppDbContext context)
     {
-        var users = new List<UserDto>
-        {
-            new()
+        _context = context;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Get()
+    {
+        var users = await _context
+            .Users.Select(u => new UserDto
             {
-                Id = Guid.NewGuid(),
-                Name = "Test User",
-                Email = "test@thtracker.com"
-            }
-        };
+                Id = u.Id,
+                Name = u.Name,
+                Email = u.Email,
+            })
+            .ToListAsync();
 
         return Ok(users);
     }
