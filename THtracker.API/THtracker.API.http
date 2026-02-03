@@ -1,0 +1,6 @@
+@THtracker.API_HostAddress = http://localhost:5159
+
+GET {{THtracker.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
