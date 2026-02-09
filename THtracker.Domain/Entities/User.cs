@@ -14,4 +14,10 @@ public class User
         Name = name;
         Email = email;
     }
+
+    public void Update(string name, string email)
+    {
+        Name = name;
+        Email = email;
+    }
 }

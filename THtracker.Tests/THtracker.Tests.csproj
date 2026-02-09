@@ -22,4 +22,11 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\THtracker.Domain\THtracker.Domain.csproj" />
+    <ProjectReference Include="..\THtracker.Application\THtracker.Application.csproj" />
+    <ProjectReference Include="..\THtracker.Infrastructure\THtracker.Infrastructure.csproj" />
+    <ProjectReference Include="..\THtracker.API\THtracker.API.csproj" />
+  </ItemGroup>
+
 </Project>
