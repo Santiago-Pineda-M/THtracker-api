@@ -9,6 +9,18 @@ public class AppDbContext : DbContext
         : base(options) { }
 
     public DbSet<User> Users => Set<User>();
+    public DbSet<Role> Roles => Set<Role>();
+    public DbSet<Permission> Permissions => Set<Permission>();
+    public DbSet<UserLogin> UserLogins => Set<UserLogin>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<Activity> Activities => Set<Activity>();
+    public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
+    public DbSet<ActivityLogValue> ActivityLogValues => Set<ActivityLogValue>();
+    public DbSet<ActivityValueDefinition> ActivityValueDefinitions =>
+        Set<ActivityValueDefinition>();
+    public DbSet<Category> Categories => Set<Category>();
+    public DbSet<UserSession> UserSessions => Set<UserSession>();
+    public DbSet<UserRole> UserRoles => Set<UserRole>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

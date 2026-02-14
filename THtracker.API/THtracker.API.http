@@ -1,6 +1,22 @@
 @THtracker.API_HostAddress = http://localhost:5159
 
-GET {{THtracker.API_HostAddress}}/weatherforecast/
+
+GET {{THtracker.API_HostAddress}}/api/users
+Accept: application/json
+
+###
+
+POST {{THtracker.API_HostAddress}}/api/users
+Content-Type: application/json
+
+{
+    "name": "John Doe",
+    "email": "[EMAIL_ADDRESS]"
+}
+
+###
+
+GET {{THtracker.API_HostAddress}}/api/users/1
 Accept: application/json
 
 ###

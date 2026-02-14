@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using THtracker.Domain.DTOs;
 using THtracker.Domain.Entities;
 using THtracker.Domain.Interfaces;
 using THtracker.Infrastructure.Persistence;
@@ -15,56 +14,58 @@ public class UserRepository : IUserRepository
         _context = context;
     }
 
-    public async Task<IEnumerable<UserDto>> GetAllAsync()
+    public async Task<IEnumerable<User>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.Users
-            .Select(u => new UserDto(u.Id, u.Name, u.Email))
-            .ToListAsync();
+        return await _context.Users.Include(u => u.Roles).ToListAsync(cancellationToken);
     }
 
-    public async Task<UserDto?> GetByIdAsync(Guid id)
+    public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var user = await _context.Users.FindAsync(id);
-        
-        return user is null 
-            ? null 
-            : new UserDto(user.Id, user.Name, user.Email);
+        return await _context
+            .Users.Include(u => u.Roles)
+                .ThenInclude(r => r.Permissions)
+            .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
     }
 
-    public async Task<UserDto> CreateAsync(CreateUserDto dto)
+    public async Task<User?> GetByEmailAsync(
+        string email,
+        CancellationToken cancellationToken = default
+    )
     {
-        var user = new User(dto.Name, dto.Email);
-        
-        _context.Users.Add(user);
-        await _context.SaveChangesAsync();
-        
-        return new UserDto(user.Id, user.Name, user.Email);
+        return await _context
+            .Users.Include(u => u.Roles)
+                .ThenInclude(r => r.Permissions)
+            .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
     }
 
-    public async Task<UserDto?> UpdateAsync(Guid id, UpdateUserDto dto)
+    public async Task<bool> ExistsByEmailAsync(
+        string email,
+        CancellationToken cancellationToken = default
+    )
     {
-        var user = await _context.Users.FindAsync(id);
-        
-        if (user is null)
-            return null;
-        
-        user.Update(dto.Name, dto.Email);
-        
-        await _context.SaveChangesAsync();
-        
-        return new UserDto(user.Id, user.Name, user.Email);
+        return await _context.Users.AnyAsync(u => u.Email == email, cancellationToken);
     }
 
-    public async Task<bool> DeleteAsync(Guid id)
+    public async Task AddAsync(User user, CancellationToken cancellationToken = default)
     {
-        var user = await _context.Users.FindAsync(id);
-        
-        if (user is null)
+        await _context.Users.AddAsync(user, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task UpdateAsync(User user, CancellationToken cancellationToken = default)
+    {
+        _context.Users.Update(user);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var user = await _context.Users.FindAsync(new object[] { id }, cancellationToken);
+        if (user == null)
             return false;
-        
+
         _context.Users.Remove(user);
-        await _context.SaveChangesAsync();
-        
+        await _context.SaveChangesAsync(cancellationToken);
         return true;
     }
 }

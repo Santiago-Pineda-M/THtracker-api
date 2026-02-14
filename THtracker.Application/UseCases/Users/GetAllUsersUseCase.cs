@@ -1,4 +1,4 @@
-using THtracker.Domain.DTOs;
+using THtracker.Application.DTOs.Users;
 using THtracker.Domain.Interfaces;
 
 namespace THtracker.Application.UseCases.Users;
@@ -14,6 +14,8 @@ public class GetAllUsersUseCase
 
     public virtual async Task<IEnumerable<UserDto>> ExecuteAsync()
     {
-        return await _repository.GetAllAsync();
+        // Validación manual (no hay parámetros, pero se puede validar contexto si es necesario)
+        var users = await _repository.GetAllAsync();
+        return users.Select(u => new UserDto(u.Id, u.Name, u.Email));
     }
 }

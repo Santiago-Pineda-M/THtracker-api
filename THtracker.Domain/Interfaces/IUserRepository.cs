@@ -1,12 +1,14 @@
-using THtracker.Domain.DTOs;
+using THtracker.Domain.Entities;
 
 namespace THtracker.Domain.Interfaces;
 
 public interface IUserRepository
 {
-    Task<IEnumerable<UserDto>> GetAllAsync();
-    Task<UserDto?> GetByIdAsync(Guid id);
-    Task<UserDto> CreateAsync(CreateUserDto dto);
-    Task<UserDto?> UpdateAsync(Guid id, UpdateUserDto dto);
-    Task<bool> DeleteAsync(Guid id);
+    Task<IEnumerable<User>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
+    Task<bool> ExistsByEmailAsync(string email, CancellationToken cancellationToken = default);
+    Task AddAsync(User user, CancellationToken cancellationToken = default);
+    Task UpdateAsync(User user, CancellationToken cancellationToken = default);
+    Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 }

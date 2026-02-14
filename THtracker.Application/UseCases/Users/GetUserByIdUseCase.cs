@@ -1,4 +1,4 @@
-using THtracker.Domain.DTOs;
+using THtracker.Application.DTOs.Users;
 using THtracker.Domain.Interfaces;
 
 namespace THtracker.Application.UseCases.Users;
@@ -14,6 +14,10 @@ public class GetUserByIdUseCase
 
     public virtual async Task<UserDto?> ExecuteAsync(Guid id)
     {
-        return await _repository.GetByIdAsync(id);
+        // Validación manual
+        if (id == Guid.Empty)
+            throw new Exception("El id de usuario es obligatorio.");
+        var user = await _repository.GetByIdAsync(id);
+        return user is null ? null : new UserDto(user.Id, user.Name, user.Email);
     }
 }

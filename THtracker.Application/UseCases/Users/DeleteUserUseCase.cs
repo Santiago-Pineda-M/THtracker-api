@@ -13,6 +13,9 @@ public class DeleteUserUseCase
 
     public virtual async Task<bool> ExecuteAsync(Guid id)
     {
+        // Validación manual
+        if (id == Guid.Empty)
+            throw new Exception("El id de usuario es obligatorio.");
         return await _repository.DeleteAsync(id);
     }
 }

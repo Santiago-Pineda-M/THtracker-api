@@ -9,11 +9,13 @@ public class HealthController : ControllerBase
     [HttpGet]
     public IActionResult Get()
     {
-        return Ok(new
-        {
-            status = "ok",
-            service = "THtracker API",
-            timestamp = DateTime.UtcNow
-        });
+        return Ok(
+            new
+            {
+                status = "ok",
+                service = "THtracker API",
+                timestamp = DateTime.UtcNow,
+            }
+        );
     }
 }

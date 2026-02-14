@@ -17,5 +17,22 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.Email).IsRequired().HasMaxLength(150);
 
         builder.HasIndex(x => x.Email).IsUnique();
+
+        builder.Property(x => x.PasswordHash);
+        builder.Property(x => x.SecurityStamp);
+
+        builder
+            .HasMany(x => x.Logins)
+            .WithOne()
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder
+            .HasMany(x => x.RefreshTokens)
+            .WithOne()
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(x => x.Roles).WithMany().UsingEntity("user_roles");
     }
 }
