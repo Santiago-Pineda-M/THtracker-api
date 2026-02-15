@@ -1,5 +1,6 @@
+using FluentValidation;
 using THtracker.Application.DTOs.Users;
-using THtracker.Application.Validators.Users;
+using THtracker.Domain.Common;
 using THtracker.Domain.Interfaces;
 
 namespace THtracker.Application.UseCases.Users;
@@ -7,35 +8,42 @@ namespace THtracker.Application.UseCases.Users;
 public class UpdateUserUseCase
 {
     private readonly IUserRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IValidator<UpdateUserRequest> _validator;
 
-    public UpdateUserUseCase(IUserRepository repository)
+    public UpdateUserUseCase(
+        IUserRepository repository, 
+        IUnitOfWork unitOfWork,
+        IValidator<UpdateUserRequest> validator)
     {
         _repository = repository;
+        _unitOfWork = unitOfWork;
+        _validator = validator;
     }
 
-    public virtual async Task<UserDto?> ExecuteAsync(Guid id, UpdateUserRequest request)
+    public virtual async Task<Result<UserDto>> ExecuteAsync(Guid id, UpdateUserRequest request, CancellationToken cancellationToken = default)
     {
-        // Validación manual
-        var validator = new UpdateUserRequestValidator();
-        var validationResult = validator.Validate(request);
+        var validationResult = await _validator.ValidateAsync(request, cancellationToken);
         if (!validationResult.IsValid)
         {
             var errors = string.Join(" | ", validationResult.Errors.Select(e => e.ErrorMessage));
-            throw new Exception($"Datos inválidos: {errors}");
+            return Result.Failure<UserDto>(new Error("Validation", errors));
         }
 
-        var user = await _repository.GetByIdAsync(id);
+        var user = await _repository.GetByIdAsync(id, cancellationToken);
         if (user is null)
-            return null;
+            return Result.Failure<UserDto>(new Error("NotFound", "User not found."));
 
-        // Check for email uniqueness if changing email
-        if (user.Email != request.Email && await _repository.ExistsByEmailAsync(request.Email))
+        if (user.Email != request.Email && await _repository.ExistsByEmailAsync(request.Email, cancellationToken))
         {
-            throw new Exception("User with this email already exists.");
+            return Result.Failure<UserDto>(new Error("Conflict", "User with this email already exists."));
         }
 
         user.Update(request.Name, request.Email);
-        await _repository.UpdateAsync(user);
+        
+        await _repository.UpdateAsync(user, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
         return new UserDto(user.Id, user.Name, user.Email);
     }
 }

@@ -302,6 +302,13 @@ public class InMemoryActivityLogRepository : IActivityLogRepository
                 .AsEnumerable()
         );
 
+    public Task<IEnumerable<ActivityLog>> GetLogsInPeriodWithDetailsAsync(
+        Guid userId,
+        DateTime start,
+        DateTime end,
+        CancellationToken cancellationToken = default
+    ) => GetOverlappingLogsAsync(userId, start, end, null, cancellationToken);
+
     public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default) =>
         Task.FromResult(_logs.Remove(id));
 }

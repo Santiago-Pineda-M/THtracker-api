@@ -1,5 +1,7 @@
+using FluentValidation;
 using THtracker.Application.DTOs.Auth;
 using THtracker.Application.Interfaces;
+using THtracker.Domain.Common;
 using THtracker.Domain.Entities;
 using THtracker.Domain.Interfaces;
 
@@ -12,13 +14,15 @@ public class SocialLoginUseCase
     private readonly IJwtProvider _jwtProvider;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IValidator<SocialLoginRequest> _validator;
 
     public SocialLoginUseCase(
         ISocialAuthenticator socialAuthenticator,
         IUserRepository userRepository,
         IJwtProvider jwtProvider,
         IRefreshTokenRepository refreshTokenRepository,
-        IUnitOfWork unitOfWork
+        IUnitOfWork unitOfWork,
+        IValidator<SocialLoginRequest> validator
     )
     {
         _socialAuthenticator = socialAuthenticator;
@@ -26,38 +30,38 @@ public class SocialLoginUseCase
         _jwtProvider = jwtProvider;
         _refreshTokenRepository = refreshTokenRepository;
         _unitOfWork = unitOfWork;
+        _validator = validator;
     }
 
-    public async Task<TokenResponse> ExecuteAsync(
+    public async Task<Result<TokenResponse>> ExecuteAsync(
         SocialLoginRequest request,
         string ipAddress,
         CancellationToken cancellationToken = default
     )
     {
-        // Validación manual
-        var validator = new Validators.Auth.SocialLoginRequestValidator();
-        var validationResult = validator.Validate(request);
+        var validationResult = await _validator.ValidateAsync(request, cancellationToken);
         if (!validationResult.IsValid)
         {
             var errors = string.Join(" | ", validationResult.Errors.Select(e => e.ErrorMessage));
-            throw new Exception($"Datos inválidos: {errors}");
+            return Result.Failure<TokenResponse>(new Error("Validation", errors));
         }
-        // 1. Authenticate with social provider
-        var profile = await _socialAuthenticator.AuthenticateAsync(request.Provider, request.Token);
 
-        // 2. Find or Create User
+        var profile = await _socialAuthenticator.AuthenticateAsync(request.Provider, request.Token);
+        if (profile == null)
+        {
+            return Result.Failure<TokenResponse>(new Error("Unauthorized", "Social authentication failed."));
+        }
+
         var user = await _userRepository.GetByEmailAsync(profile.Email, cancellationToken);
 
         if (user == null)
         {
-            // Register new user automatically
             user = new User(profile.Name, profile.Email);
             user.AddLogin(profile.Provider, profile.ProviderKey, profile.Name);
             await _userRepository.AddAsync(user, cancellationToken);
         }
         else
         {
-            // Check if login provider is already linked
             if (!user.Logins.Any(l => l.LoginProvider == profile.Provider))
             {
                 user.AddLogin(profile.Provider, profile.ProviderKey, profile.Name);
@@ -65,7 +69,6 @@ public class SocialLoginUseCase
             }
         }
 
-        // 3. Generate Tokens
         string accessToken = _jwtProvider.GenerateAccessToken(user);
         var refreshTokenEntity = _jwtProvider.GenerateRefreshToken(
             user,
@@ -73,7 +76,6 @@ public class SocialLoginUseCase
             request.DeviceInfo
         );
 
-        // 4. Save
         await _refreshTokenRepository.AddAsync(refreshTokenEntity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

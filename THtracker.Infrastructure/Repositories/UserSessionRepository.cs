@@ -38,7 +38,6 @@ public class UserSessionRepository : IUserSessionRepository
     public async Task AddAsync(UserSession session, CancellationToken cancellationToken = default)
     {
         await _context.UserSessions.AddAsync(session, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task UpdateAsync(
@@ -47,7 +46,6 @@ public class UserSessionRepository : IUserSessionRepository
     )
     {
         _context.UserSessions.Update(session);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
@@ -56,7 +54,6 @@ public class UserSessionRepository : IUserSessionRepository
         if (session == null)
             return false;
         _context.UserSessions.Remove(session);
-        await _context.SaveChangesAsync(cancellationToken);
         return true;
     }
 }

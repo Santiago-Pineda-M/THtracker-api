@@ -24,6 +24,7 @@ public class GetAllUsersUseCaseTests
     [Fact]
     public async Task ExecuteAsync_ShouldReturnAllUsers_FromRepository()
     {
+        // Arrange
         var user1 = new User("User 1", "user1@example.com");
         var user2 = new User("User 2", "user2@example.com");
         var users = new List<User> { user1, user2 };
@@ -34,20 +35,27 @@ public class GetAllUsersUseCaseTests
         };
         _repositoryMock.Setup(x => x.GetAllAsync()).ReturnsAsync(users);
 
+        // Act
         var result = await _useCase.ExecuteAsync();
 
-        result.Should().BeEquivalentTo(expectedDtos);
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().BeEquivalentTo(expectedDtos);
         _repositoryMock.Verify(x => x.GetAllAsync(), Times.Once);
     }
 
     [Fact]
     public async Task ExecuteAsync_ShouldReturnEmptyList_WhenNoUsersExist()
     {
+        // Arrange
         _repositoryMock.Setup(x => x.GetAllAsync()).ReturnsAsync(new List<User>());
 
+        // Act
         var result = await _useCase.ExecuteAsync();
 
-        result.Should().BeEmpty();
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().BeEmpty();
         _repositoryMock.Verify(x => x.GetAllAsync(), Times.Once);
     }
 }

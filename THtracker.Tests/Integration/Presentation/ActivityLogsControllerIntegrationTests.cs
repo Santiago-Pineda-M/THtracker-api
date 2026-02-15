@@ -49,7 +49,7 @@ namespace THtracker.Tests.Integration.Presentation
                 $"/api/v1/activity-logs/{log.Id}/stop",
                 null
             );
-            _ = response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            _ = response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         }
 
         [Fact]
@@ -81,7 +81,7 @@ namespace THtracker.Tests.Integration.Presentation
 
         public void Dispose()
         {
-            throw new NotImplementedException();
+            _factory.Dispose();
         }
     }
 }

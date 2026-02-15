@@ -1,4 +1,6 @@
 using FluentAssertions;
+using FluentValidation;
+using FluentValidation.Results;
 using Moq;
 using THtracker.Application.DTOs.ActivityValueDefinitions;
 using THtracker.Application.UseCases.ActivityValueDefinitions;
@@ -14,13 +16,22 @@ public class CreateValueDefinitionUseCaseTests
 {
     private readonly Mock<IActivityValueDefinitionRepository> _definitionRepositoryMock;
     private readonly Mock<IActivityRepository> _activityRepositoryMock;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+    private readonly Mock<IValidator<CreateValueDefinitionRequest>> _validatorMock;
     private readonly CreateValueDefinitionUseCase _useCase;
 
     public CreateValueDefinitionUseCaseTests()
     {
         _definitionRepositoryMock = new Mock<IActivityValueDefinitionRepository>();
         _activityRepositoryMock = new Mock<IActivityRepository>();
-        _useCase = new CreateValueDefinitionUseCase(_definitionRepositoryMock.Object, _activityRepositoryMock.Object);
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _validatorMock = new Mock<IValidator<CreateValueDefinitionRequest>>();
+        
+        _useCase = new CreateValueDefinitionUseCase(
+            _definitionRepositoryMock.Object, 
+            _activityRepositoryMock.Object,
+            _unitOfWorkMock.Object,
+            _validatorMock.Object);
     }
 
     [Fact]
@@ -32,6 +43,9 @@ public class CreateValueDefinitionUseCaseTests
         var activity = new Activity(userId, Guid.NewGuid(), "Running", true);
         var request = new CreateValueDefinitionRequest("Distance", "Number", true, "km");
 
+        _validatorMock.Setup(x => x.ValidateAsync(request, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult());
+
         _activityRepositoryMock.Setup(x => x.GetByIdAsync(activityId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(activity);
 
@@ -39,44 +53,36 @@ public class CreateValueDefinitionUseCaseTests
         var result = await _useCase.ExecuteAsync(userId, activityId, request);
 
         // Assert
-        result.Should().NotBeNull();
-        result.Name.Should().Be("Distance");
-        result.ValueType.Should().Be("Number");
-        result.IsRequired.Should().BeTrue();
-        result.Unit.Should().Be("km");
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Name.Should().Be("Distance");
+        result.Value.ValueType.Should().Be("Number");
+        result.Value.IsRequired.Should().BeTrue();
+        result.Value.Unit.Should().Be("km");
+        
         _definitionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<ActivityValueDefinition>(), It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public async Task ExecuteAsync_ShouldThrow_WhenNameIsInvalid(string invalidName)
-    {
-        // Arrange
-        var request = new CreateValueDefinitionRequest(invalidName, "Number");
-
-        // Act
-        Func<Task> act = async () => await _useCase.ExecuteAsync(Guid.NewGuid(), Guid.NewGuid(), request);
-
-        // Assert
-        await act.Should().ThrowAsync<Exception>().WithMessage("*El nombre es obligatorio*");
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldThrow_WhenTypeIsInvalid()
+    public async Task ExecuteAsync_ShouldReturnFailure_WhenValidationFails()
     {
         // Arrange
-        var request = new CreateValueDefinitionRequest("Distance", "InvalidType");
+        var request = new CreateValueDefinitionRequest("", "Number");
+        var failures = new List<ValidationFailure> { new("Name", "El nombre es obligatorio") };
+        
+        _validatorMock.Setup(x => x.ValidateAsync(request, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult(failures));
 
         // Act
-        Func<Task> act = async () => await _useCase.ExecuteAsync(Guid.NewGuid(), Guid.NewGuid(), request);
+        var result = await _useCase.ExecuteAsync(Guid.NewGuid(), Guid.NewGuid(), request);
 
         // Assert
-        await act.Should().ThrowAsync<Exception>().WithMessage("*El tipo debe ser uno de: Number, Text, Boolean, Time*");
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Validation");
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldThrow_WhenActivityDoesNotBelongToUser()
+    public async Task ExecuteAsync_ShouldReturnFailure_WhenActivityDoesNotBelongToUser()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -85,13 +91,17 @@ public class CreateValueDefinitionUseCaseTests
         var activity = new Activity(otherUserId, Guid.NewGuid(), "Secret Activity", true);
         var request = new CreateValueDefinitionRequest("Extra Data", "Text");
 
+        _validatorMock.Setup(x => x.ValidateAsync(request, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult());
+
         _activityRepositoryMock.Setup(x => x.GetByIdAsync(activityId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(activity);
 
         // Act
-        Func<Task> act = async () => await _useCase.ExecuteAsync(userId, activityId, request);
+        var result = await _useCase.ExecuteAsync(userId, activityId, request);
 
         // Assert
-        await act.Should().ThrowAsync<Exception>().WithMessage("No tienes acceso a esta actividad.");
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Forbidden");
     }
 }

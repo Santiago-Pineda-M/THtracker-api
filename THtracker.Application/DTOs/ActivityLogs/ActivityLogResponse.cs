@@ -1,3 +1,5 @@
+using THtracker.Application.DTOs.ActivityLogValues;
+
 namespace THtracker.Application.DTOs.ActivityLogs;
 
 public record ActivityLogResponse(
@@ -5,5 +7,6 @@ public record ActivityLogResponse(
     Guid ActivityId, 
     DateTime StartedAt, 
     DateTime? EndedAt,
-    double? DurationMinutes = null
+    double? DurationMinutes = null,
+    IEnumerable<LogValueResponse>? Values = null
 );

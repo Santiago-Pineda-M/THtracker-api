@@ -35,13 +35,11 @@ public class CategoryRepository : ICategoryRepository
     public async Task AddAsync(Category category, CancellationToken cancellationToken = default)
     {
         await _context.Categories.AddAsync(category, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task UpdateAsync(Category category, CancellationToken cancellationToken = default)
     {
         _context.Categories.Update(category);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
@@ -50,7 +48,6 @@ public class CategoryRepository : ICategoryRepository
         if (category == null)
             return false;
         _context.Categories.Remove(category);
-        await _context.SaveChangesAsync(cancellationToken);
         return true;
     }
 }

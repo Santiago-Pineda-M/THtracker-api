@@ -13,5 +13,13 @@ public class ActivityLogValueConfiguration : IEntityTypeConfiguration<ActivityLo
         builder.Property(x => x.ActivityLogId).IsRequired();
         builder.Property(x => x.ValueDefinitionId).IsRequired();
         builder.Property(x => x.Value).IsRequired();
+        builder.HasOne<ActivityLog>()
+            .WithMany(l => l.LogValues)
+            .HasForeignKey(x => x.ActivityLogId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(x => x.ValueDefinition)
+            .WithMany()
+            .HasForeignKey(x => x.ValueDefinitionId);
     }
 }

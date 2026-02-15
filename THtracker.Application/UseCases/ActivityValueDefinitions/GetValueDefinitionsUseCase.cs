@@ -1,4 +1,5 @@
 using THtracker.Application.DTOs.ActivityValueDefinitions;
+using THtracker.Domain.Common;
 using THtracker.Domain.Interfaces;
 
 namespace THtracker.Application.UseCases.ActivityValueDefinitions;
@@ -16,18 +17,18 @@ public class GetValueDefinitionsUseCase
         _activityRepository = activityRepository;
     }
 
-    public async Task<IEnumerable<ActivityValueDefinitionResponse>> ExecuteAsync(Guid userId, Guid activityId, CancellationToken cancellationToken = default)
+    public async Task<Result<IEnumerable<ActivityValueDefinitionResponse>>> ExecuteAsync(Guid userId, Guid activityId, CancellationToken cancellationToken = default)
     {
         var activity = await _activityRepository.GetByIdAsync(activityId, cancellationToken);
         if (activity == null)
-            throw new Exception("La actividad no existe.");
+            return Result.Failure<IEnumerable<ActivityValueDefinitionResponse>>(new Error("NotFound", "La actividad no existe."));
 
         if (activity.UserId != userId)
-            throw new Exception("No tienes acceso a esta actividad.");
+            return Result.Failure<IEnumerable<ActivityValueDefinitionResponse>>(new Error("Forbidden", "No tienes acceso a esta actividad."));
 
         var definitions = await _definitionRepository.GetAllByActivityAsync(activityId, cancellationToken);
 
-        return definitions.Select(d => new ActivityValueDefinitionResponse(
+        var response = definitions.Select(d => new ActivityValueDefinitionResponse(
             d.Id,
             d.ActivityId,
             d.Name,
@@ -37,5 +38,7 @@ public class GetValueDefinitionsUseCase
             d.MinValue,
             d.MaxValue
         ));
+
+        return Result.Success(response);
     }
 }

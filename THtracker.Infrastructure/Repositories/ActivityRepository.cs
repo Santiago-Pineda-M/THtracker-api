@@ -35,13 +35,11 @@ public class ActivityRepository : IActivityRepository
     public async Task AddAsync(Activity activity, CancellationToken cancellationToken = default)
     {
         await _context.Activities.AddAsync(activity, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task UpdateAsync(Activity activity, CancellationToken cancellationToken = default)
     {
         _context.Activities.Update(activity);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
@@ -50,7 +48,6 @@ public class ActivityRepository : IActivityRepository
         if (activity == null)
             return false;
         _context.Activities.Remove(activity);
-        await _context.SaveChangesAsync(cancellationToken);
         return true;
     }
 }

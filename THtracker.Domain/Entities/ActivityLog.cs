@@ -53,4 +53,6 @@ public class ActivityLog
 
         return end - start;
     }
+
+    public ICollection<ActivityLogValue> LogValues { get; private set; } = new List<ActivityLogValue>();
 }

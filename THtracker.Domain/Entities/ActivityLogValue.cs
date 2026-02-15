@@ -7,6 +7,8 @@ public class ActivityLogValue
     public Guid ValueDefinitionId { get; private set; }
     public string Value { get; private set; } = null!;
 
+    public ActivityValueDefinition ValueDefinition { get; private set; } = null!;
+
     private ActivityLogValue() { }
 
     public ActivityLogValue(Guid activityLogId, Guid valueDefinitionId, string value)

@@ -24,26 +24,34 @@ public class GetUserByIdUseCaseTests
     [Fact]
     public async Task ExecuteAsync_ShouldReturnUser_WhenUserExists()
     {
+        // Arrange
         var userId = Guid.NewGuid();
         var user = UserTestBuilder.WithId("John Doe", "john@example.com", userId);
-        var expectedDto = new UserDto(userId, "John Doe", "john@example.com");
         _repositoryMock.Setup(x => x.GetByIdAsync(userId)).ReturnsAsync(user);
 
+        // Act
         var result = await _useCase.ExecuteAsync(userId);
 
-        result.Should().BeEquivalentTo(expectedDto);
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Id.Should().Be(userId);
+        result.Value.Name.Should().Be("John Doe");
         _repositoryMock.Verify(x => x.GetByIdAsync(userId), Times.Once);
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldReturnNull_WhenUserDoesNotExist()
+    public async Task ExecuteAsync_ShouldReturnFailure_WhenUserDoesNotExist()
     {
+        // Arrange
         var userId = Guid.NewGuid();
         _repositoryMock.Setup(x => x.GetByIdAsync(userId)).ReturnsAsync((THtracker.Domain.Entities.User?)null);
 
+        // Act
         var result = await _useCase.ExecuteAsync(userId);
 
-        result.Should().BeNull();
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("NotFound");
         _repositoryMock.Verify(x => x.GetByIdAsync(userId), Times.Once);
     }
 }

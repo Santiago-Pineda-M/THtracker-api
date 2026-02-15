@@ -20,7 +20,9 @@ public class ActivityLogRepository : IActivityLogRepository
     )
     {
         return await _context
-            .ActivityLogs.Where(l => l.ActivityId == activityId)
+            .ActivityLogs
+            .Include(l => l.LogValues)
+            .Where(l => l.ActivityId == activityId)
             .ToListAsync(cancellationToken);
     }
 
@@ -29,19 +31,19 @@ public class ActivityLogRepository : IActivityLogRepository
         CancellationToken cancellationToken = default
     )
     {
-        return await _context.ActivityLogs.FindAsync(new object[] { id }, cancellationToken);
+        return await _context.ActivityLogs
+            .Include(l => l.LogValues)
+            .FirstOrDefaultAsync(l => l.Id == id, cancellationToken);
     }
 
     public async Task AddAsync(ActivityLog log, CancellationToken cancellationToken = default)
     {
         await _context.ActivityLogs.AddAsync(log, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task UpdateAsync(ActivityLog log, CancellationToken cancellationToken = default)
     {
         _context.ActivityLogs.Update(log);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<IEnumerable<ActivityLog>> GetActiveLogsByUserAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -77,13 +79,26 @@ public class ActivityLogRepository : IActivityLogRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IEnumerable<ActivityLog>> GetLogsInPeriodWithDetailsAsync(Guid userId, DateTime start, DateTime end, CancellationToken cancellationToken = default)
+    {
+        return await _context.ActivityLogs
+            .Include(l => l.LogValues)
+                .ThenInclude(v => v.ValueDefinition)
+            .Join(_context.Activities,
+                log => log.ActivityId,
+                activity => activity.Id,
+                (log, activity) => new { Log = log, Activity = activity })
+            .Where(x => x.Activity.UserId == userId && x.Log.StartedAt < end && (x.Log.EndedAt == null || x.Log.EndedAt > start))
+            .Select(x => x.Log)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var log = await _context.ActivityLogs.FindAsync(new object[] { id }, cancellationToken);
         if (log == null)
             return false;
         _context.ActivityLogs.Remove(log);
-        await _context.SaveChangesAsync(cancellationToken);
         return true;
     }
 }

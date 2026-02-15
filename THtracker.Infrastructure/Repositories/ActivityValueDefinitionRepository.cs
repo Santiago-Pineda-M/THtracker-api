@@ -41,7 +41,6 @@ public class ActivityValueDefinitionRepository : IActivityValueDefinitionReposit
     )
     {
         await _context.ActivityValueDefinitions.AddAsync(valueDefinition, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task UpdateAsync(
@@ -50,7 +49,6 @@ public class ActivityValueDefinitionRepository : IActivityValueDefinitionReposit
     )
     {
         _context.ActivityValueDefinitions.Update(valueDefinition);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
@@ -62,7 +60,6 @@ public class ActivityValueDefinitionRepository : IActivityValueDefinitionReposit
         if (valueDefinition == null)
             return false;
         _context.ActivityValueDefinitions.Remove(valueDefinition);
-        await _context.SaveChangesAsync(cancellationToken);
         return true;
     }
 }

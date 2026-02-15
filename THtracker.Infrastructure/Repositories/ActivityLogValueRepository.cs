@@ -38,7 +38,6 @@ public class ActivityLogValueRepository : IActivityLogValueRepository
     )
     {
         await _context.ActivityLogValues.AddAsync(logValue, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
@@ -50,7 +49,6 @@ public class ActivityLogValueRepository : IActivityLogValueRepository
         if (logValue == null)
             return false;
         _context.ActivityLogValues.Remove(logValue);
-        await _context.SaveChangesAsync(cancellationToken);
         return true;
     }
 }

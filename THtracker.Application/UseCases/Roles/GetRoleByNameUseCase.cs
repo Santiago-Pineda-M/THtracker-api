@@ -1,4 +1,5 @@
-using THtracker.Domain.Entities;
+using THtracker.Application.DTOs.Roles;
+using THtracker.Domain.Common;
 using THtracker.Domain.Interfaces;
 
 namespace THtracker.Application.UseCases.Roles;
@@ -12,11 +13,15 @@ public class GetRoleByNameUseCase
         _roleRepository = roleRepository;
     }
 
-    public async Task<Role?> ExecuteAsync(
+    public async Task<Result<RoleResponse>> ExecuteAsync(
         string name,
         CancellationToken cancellationToken = default
     )
     {
-        return await _roleRepository.GetByNameAsync(name, cancellationToken);
+        var role = await _roleRepository.GetByNameAsync(name, cancellationToken);
+        if (role == null)
+            return Result.Failure<RoleResponse>(new Error("NotFound", $"El rol '{name}' no existe."));
+
+        return new RoleResponse(role.Id, role.Name);
     }
 }

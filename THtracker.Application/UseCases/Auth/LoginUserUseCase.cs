@@ -1,5 +1,7 @@
+using FluentValidation;
 using THtracker.Application.DTOs.Auth;
 using THtracker.Application.Interfaces;
+using THtracker.Domain.Common;
 using THtracker.Domain.Entities;
 using THtracker.Domain.Interfaces;
 
@@ -12,13 +14,15 @@ public class LoginUserUseCase
     private readonly IJwtProvider _jwtProvider;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IValidator<LoginRequest> _validator;
 
     public LoginUserUseCase(
         IUserRepository userRepository,
         IPasswordHasher passwordHasher,
         IJwtProvider jwtProvider,
         IRefreshTokenRepository refreshTokenRepository,
-        IUnitOfWork unitOfWork
+        IUnitOfWork unitOfWork,
+        IValidator<LoginRequest> validator
     )
     {
         _userRepository = userRepository;
@@ -26,50 +30,36 @@ public class LoginUserUseCase
         _jwtProvider = jwtProvider;
         _refreshTokenRepository = refreshTokenRepository;
         _unitOfWork = unitOfWork;
+        _validator = validator;
     }
 
-    public async Task<TokenResponse> ExecuteAsync(
+    public async Task<Result<TokenResponse>> ExecuteAsync(
         LoginRequest request,
         string ipAddress,
         CancellationToken cancellationToken = default
     )
     {
-        // Validación manual
-        var validator = new Validators.Auth.LoginRequestValidator();
-        var validationResult = validator.Validate(request);
+        var validationResult = await _validator.ValidateAsync(request, cancellationToken);
         if (!validationResult.IsValid)
         {
             var errors = string.Join(" | ", validationResult.Errors.Select(e => e.ErrorMessage));
-            throw new Exception($"Datos inválidos: {errors}");
+            return Result.Failure<TokenResponse>(new Error("Validation", errors));
         }
-        // 1. Find User by Email
+
         var user = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
-
-        if (user == null)
+        if (user == null || user.PasswordHash == null || !_passwordHasher.Verify(request.Password, user.PasswordHash))
         {
-            throw new Exception("Invalid Credentials");
+            return Result.Failure<TokenResponse>(new Error("Unauthorized", "Invalid Credentials"));
         }
 
-        // 2. Verify Password
-        if (
-            user.PasswordHash == null
-            || !_passwordHasher.Verify(request.Password, user.PasswordHash)
-        )
-        {
-            throw new Exception("Invalid Credentials");
-        }
-
-        // 3. Generate Access Token service
         string accessToken = _jwtProvider.GenerateAccessToken(user);
 
-        // 4. Create Refresh Token
         var refreshTokenEntity = _jwtProvider.GenerateRefreshToken(
             user,
             ipAddress,
             request.DeviceInfo
         );
 
-        // 5. Save Refresh Token
         await _refreshTokenRepository.AddAsync(refreshTokenEntity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

@@ -46,7 +46,6 @@ public class UserRoleRepository : IUserRoleRepository
     {
         var userRole = new UserRole(userId, roleId);
         await _context.UserRoles.AddAsync(userRole, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task RemoveRoleFromUserAsync(
@@ -62,7 +61,6 @@ public class UserRoleRepository : IUserRoleRepository
         if (userRole != null)
         {
             _context.UserRoles.Remove(userRole);
-            await _context.SaveChangesAsync(cancellationToken);
         }
     }
 

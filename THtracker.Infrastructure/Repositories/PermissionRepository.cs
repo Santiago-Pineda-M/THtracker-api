@@ -32,7 +32,6 @@ public class PermissionRepository : IPermissionRepository
     public async Task AddAsync(Permission permission, CancellationToken cancellationToken = default)
     {
         await _context.Permissions.AddAsync(permission, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task UpdateAsync(
@@ -41,7 +40,6 @@ public class PermissionRepository : IPermissionRepository
     )
     {
         _context.Permissions.Update(permission);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
@@ -50,7 +48,6 @@ public class PermissionRepository : IPermissionRepository
         if (permission == null)
             return false;
         _context.Permissions.Remove(permission);
-        await _context.SaveChangesAsync(cancellationToken);
         return true;
     }
 }

@@ -1,5 +1,6 @@
 using THtracker.Application.DTOs.Auth;
 using THtracker.Application.Interfaces;
+using THtracker.Domain.Common;
 using THtracker.Domain.Interfaces;
 
 namespace THtracker.Application.UseCases.Auth;
@@ -24,21 +25,16 @@ public class RefreshTokenUseCase
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<TokenResponse> ExecuteAsync(
+    public async Task<Result<TokenResponse>> ExecuteAsync(
         string refreshToken,
         string ipAddress,
         string deviceInfo,
         CancellationToken cancellationToken = default
     )
     {
-        // Validación manual
         if (string.IsNullOrWhiteSpace(refreshToken))
-            throw new Exception("El refresh token es obligatorio.");
-        if (string.IsNullOrWhiteSpace(ipAddress))
-            throw new Exception("La dirección IP es obligatoria.");
-        if (string.IsNullOrWhiteSpace(deviceInfo))
-            throw new Exception("La información del dispositivo es obligatoria.");
-        // 1. Get refresh token from store
+            return Result.Failure<TokenResponse>(new Error("Validation", "El refresh token es obligatorio."));
+
         var tokenEntity = await _refreshTokenRepository.GetByTokenAsync(
             refreshToken,
             cancellationToken
@@ -46,25 +42,21 @@ public class RefreshTokenUseCase
 
         if (tokenEntity == null || !tokenEntity.IsActive)
         {
-            throw new Exception("Invalid or expired refresh token");
+            return Result.Failure<TokenResponse>(new Error("Unauthorized", "Invalid or expired refresh token"));
         }
 
-        // 2. Get User
         var user = await _userRepository.GetByIdAsync(tokenEntity.UserId, cancellationToken);
         if (user == null)
         {
-            throw new Exception("User not found");
+            return Result.Failure<TokenResponse>(new Error("NotFound", "User not found"));
         }
 
-        // 3. Revoke old token
         tokenEntity.Revoke(ipAddress, "Token refreshed");
         await _refreshTokenRepository.UpdateAsync(tokenEntity, cancellationToken);
 
-        // 4. Generate new tokens
         string newAccessToken = _jwtProvider.GenerateAccessToken(user);
         var newRefreshTokenEntity = _jwtProvider.GenerateRefreshToken(user, ipAddress, deviceInfo);
 
-        // 5. Save new refresh token
         await _refreshTokenRepository.AddAsync(newRefreshTokenEntity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

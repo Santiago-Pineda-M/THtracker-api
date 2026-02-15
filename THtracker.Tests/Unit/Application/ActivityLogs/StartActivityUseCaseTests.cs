@@ -14,13 +14,18 @@ public class StartActivityUseCaseTests
 {
     private readonly Mock<IActivityLogRepository> _logRepositoryMock;
     private readonly Mock<IActivityRepository> _activityRepositoryMock;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly StartActivityUseCase _useCase;
 
     public StartActivityUseCaseTests()
     {
         _logRepositoryMock = new Mock<IActivityLogRepository>();
         _activityRepositoryMock = new Mock<IActivityRepository>();
-        _useCase = new StartActivityUseCase(_logRepositoryMock.Object, _activityRepositoryMock.Object);
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _useCase = new StartActivityUseCase(
+            _logRepositoryMock.Object, 
+            _activityRepositoryMock.Object,
+            _unitOfWorkMock.Object);
     }
 
     [Fact]
@@ -41,12 +46,13 @@ public class StartActivityUseCaseTests
         var result = await _useCase.ExecuteAsync(userId, request);
 
         // Assert
-        result.Should().NotBeNull();
+        result.IsSuccess.Should().BeTrue();
         _logRepositoryMock.Verify(x => x.AddAsync(It.IsAny<ActivityLog>(), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldThrow_WhenStartingExclusiveWhileActiveExists()
+    public async Task ExecuteAsync_ShouldReturnFailure_WhenStartingExclusiveWhileActiveExists()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -62,15 +68,16 @@ public class StartActivityUseCaseTests
             .ReturnsAsync(new List<ActivityLog> { activeLog });
 
         // Act
-        Func<Task> act = async () => await _useCase.ExecuteAsync(userId, request);
+        var result = await _useCase.ExecuteAsync(userId, request);
 
         // Assert
-        await act.Should().ThrowAsync<Exception>()
-            .WithMessage("No puedes iniciar una actividad que no permite solapamiento mientras hay otras actividades activas.");
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("OverlapConflict");
+        result.Error.Description.Should().Contain("No puedes iniciar una actividad que no permite solapamiento");
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldThrow_WhenStartingAnyWhileExclusiveIsActive()
+    public async Task ExecuteAsync_ShouldReturnFailure_WhenStartingAnyWhileExclusiveIsActive()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -90,11 +97,12 @@ public class StartActivityUseCaseTests
             .ReturnsAsync(new List<ActivityLog> { activeLog });
 
         // Act
-        Func<Task> act = async () => await _useCase.ExecuteAsync(userId, request);
+        var result = await _useCase.ExecuteAsync(userId, request);
 
         // Assert
-        await act.Should().ThrowAsync<Exception>()
-            .WithMessage("*no permite solapamiento.");
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("OverlapConflict");
+        result.Error.Description.Should().Contain("no permite solapamiento");
     }
 
     [Fact]
@@ -121,7 +129,8 @@ public class StartActivityUseCaseTests
         var result = await _useCase.ExecuteAsync(userId, request);
 
         // Assert
-        result.Should().NotBeNull();
+        result.IsSuccess.Should().BeTrue();
         _logRepositoryMock.Verify(x => x.AddAsync(It.IsAny<ActivityLog>(), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

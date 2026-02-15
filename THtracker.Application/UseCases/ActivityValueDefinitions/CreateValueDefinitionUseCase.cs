@@ -1,5 +1,6 @@
+using FluentValidation;
 using THtracker.Application.DTOs.ActivityValueDefinitions;
-using THtracker.Application.Validators.ActivityValueDefinitions;
+using THtracker.Domain.Common;
 using THtracker.Domain.Entities;
 using THtracker.Domain.Interfaces;
 
@@ -9,31 +10,36 @@ public class CreateValueDefinitionUseCase
 {
     private readonly IActivityValueDefinitionRepository _definitionRepository;
     private readonly IActivityRepository _activityRepository;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IValidator<CreateValueDefinitionRequest> _validator;
 
     public CreateValueDefinitionUseCase(
         IActivityValueDefinitionRepository definitionRepository,
-        IActivityRepository activityRepository)
+        IActivityRepository activityRepository,
+        IUnitOfWork unitOfWork,
+        IValidator<CreateValueDefinitionRequest> validator)
     {
         _definitionRepository = definitionRepository;
         _activityRepository = activityRepository;
+        _unitOfWork = unitOfWork;
+        _validator = validator;
     }
 
-    public async Task<ActivityValueDefinitionResponse> ExecuteAsync(Guid userId, Guid activityId, CreateValueDefinitionRequest request, CancellationToken cancellationToken = default)
+    public async Task<Result<ActivityValueDefinitionResponse>> ExecuteAsync(Guid userId, Guid activityId, CreateValueDefinitionRequest request, CancellationToken cancellationToken = default)
     {
-        var validator = new CreateValueDefinitionRequestValidator();
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
+        var validationResult = await _validator.ValidateAsync(request, cancellationToken);
         if (!validationResult.IsValid)
         {
             var errors = string.Join(" | ", validationResult.Errors.Select(e => e.ErrorMessage));
-            throw new Exception($"Datos inválidos: {errors}");
+            return Result.Failure<ActivityValueDefinitionResponse>(new Error("Validation", errors));
         }
 
         var activity = await _activityRepository.GetByIdAsync(activityId, cancellationToken);
         if (activity == null)
-            throw new Exception("La actividad no existe.");
+            return Result.Failure<ActivityValueDefinitionResponse>(new Error("NotFound", "La actividad no existe."));
 
         if (activity.UserId != userId)
-            throw new Exception("No tienes acceso a esta actividad.");
+            return Result.Failure<ActivityValueDefinitionResponse>(new Error("Forbidden", "No tienes acceso a esta actividad."));
 
         var definition = new ActivityValueDefinition(
             activityId,
@@ -46,6 +52,7 @@ public class CreateValueDefinitionUseCase
         );
 
         await _definitionRepository.AddAsync(definition, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new ActivityValueDefinitionResponse(
             definition.Id,

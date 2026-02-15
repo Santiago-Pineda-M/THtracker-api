@@ -49,13 +49,11 @@ public class UserRepository : IUserRepository
     public async Task AddAsync(User user, CancellationToken cancellationToken = default)
     {
         await _context.Users.AddAsync(user, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task UpdateAsync(User user, CancellationToken cancellationToken = default)
     {
         _context.Users.Update(user);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
@@ -65,7 +63,6 @@ public class UserRepository : IUserRepository
             return false;
 
         _context.Users.Remove(user);
-        await _context.SaveChangesAsync(cancellationToken);
         return true;
     }
 }

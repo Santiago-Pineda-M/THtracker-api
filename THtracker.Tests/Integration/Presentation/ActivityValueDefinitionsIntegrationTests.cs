@@ -52,7 +52,7 @@ namespace THtracker.Tests.Integration.Presentation
 
         public void Dispose()
         {
-            throw new NotImplementedException();
+            _factory.Dispose();
         }
     }
 }

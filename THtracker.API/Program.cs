@@ -15,6 +15,7 @@ using THtracker.Application.UseCases.Activities;
 using THtracker.Application.UseCases.ActivityLogs;
 using THtracker.Application.UseCases.ActivityValueDefinitions;
 using THtracker.Application.UseCases.ActivityLogValues;
+using THtracker.Application.UseCases.Reports;
 using THtracker.Application.UseCases.Seed;
 using THtracker.Application.Validators.Users;
 using THtracker.Application.DTOs.Seed;
@@ -23,6 +24,7 @@ using THtracker.Infrastructure.Persistence;
 using THtracker.Infrastructure.Repositories;
 using THtracker.Infrastructure.Seeding;
 using THtracker.Infrastructure.Services;
+using THtracker.API.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -158,6 +160,10 @@ builder.Services.AddScoped<GetValueDefinitionByIdUseCase>();
 
 // Application Layer - Use Cases (Log Values)
 builder.Services.AddScoped<SaveLogValuesUseCase>();
+builder.Services.AddScoped<GetLogValuesUseCase>();
+
+// Application Layer - Use Cases (Reports)
+builder.Services.AddScoped<GetUserActivityReportUseCase>();
 
 // Application Layer - Use Cases (Auth)
 builder.Services.AddScoped<RegisterUserUseCase>();
@@ -182,6 +188,8 @@ var app = builder.Build();
 // =======================
 // Middleware
 // =======================
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {

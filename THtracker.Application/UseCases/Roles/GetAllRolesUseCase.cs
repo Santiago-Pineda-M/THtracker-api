@@ -1,4 +1,5 @@
-using THtracker.Domain.Entities;
+using THtracker.Application.DTOs.Roles;
+using THtracker.Domain.Common;
 using THtracker.Domain.Interfaces;
 
 namespace THtracker.Application.UseCases.Roles;
@@ -12,8 +13,9 @@ public class GetAllRolesUseCase
         _roleRepository = roleRepository;
     }
 
-    public async Task<IEnumerable<Role>> ExecuteAsync(CancellationToken cancellationToken = default)
+    public async Task<Result<IEnumerable<RoleResponse>>> ExecuteAsync(CancellationToken cancellationToken = default)
     {
-        return await _roleRepository.GetAllAsync(cancellationToken);
+        var roles = await _roleRepository.GetAllAsync(cancellationToken);
+        return Result.Success(roles.Select(r => new RoleResponse(r.Id, r.Name)));
     }
 }

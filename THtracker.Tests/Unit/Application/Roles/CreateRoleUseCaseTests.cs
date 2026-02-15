@@ -12,12 +12,14 @@ namespace THtracker.Tests.Unit.Application.Roles;
 public class CreateRoleUseCaseTests
 {
     private readonly Mock<IRoleRepository> _roleRepositoryMock;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly CreateRoleUseCase _useCase;
 
     public CreateRoleUseCaseTests()
     {
         _roleRepositoryMock = new Mock<IRoleRepository>();
-        _useCase = new CreateRoleUseCase(_roleRepositoryMock.Object);
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _useCase = new CreateRoleUseCase(_roleRepositoryMock.Object, _unitOfWorkMock.Object);
     }
 
     [Fact]
@@ -32,12 +34,14 @@ public class CreateRoleUseCaseTests
         var result = await _useCase.ExecuteAsync(roleName);
 
         // Assert
-        result.Should().NotBeEmpty();
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeEmpty();
         _roleRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Role>(), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldThrowException_WhenRoleNameAlreadyExists()
+    public async Task ExecuteAsync_ShouldReturnFailure_WhenRoleNameAlreadyExists()
     {
         // Arrange
         var roleName = "ExistingRole";
@@ -45,10 +49,10 @@ public class CreateRoleUseCaseTests
             .ReturnsAsync(new Role(roleName));
 
         // Act
-        Func<Task> act = async () => await _useCase.ExecuteAsync(roleName);
+        var result = await _useCase.ExecuteAsync(roleName);
 
         // Assert
-        await act.Should().ThrowAsync<Exception>()
-            .WithMessage($"Role '{roleName}' already exists.");
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Conflict");
     }
 }

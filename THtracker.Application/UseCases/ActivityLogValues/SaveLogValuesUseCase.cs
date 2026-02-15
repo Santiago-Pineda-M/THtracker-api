@@ -1,4 +1,5 @@
 using THtracker.Application.DTOs.ActivityLogValues;
+using THtracker.Domain.Common;
 using THtracker.Domain.Entities;
 using THtracker.Domain.Interfaces;
 
@@ -10,26 +11,31 @@ public class SaveLogValuesUseCase
     private readonly IActivityLogRepository _logRepository;
     private readonly IActivityValueDefinitionRepository _definitionRepository;
     private readonly IActivityRepository _activityRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
     public SaveLogValuesUseCase(
         IActivityLogValueRepository logValueRepository,
         IActivityLogRepository logRepository,
         IActivityValueDefinitionRepository definitionRepository,
-        IActivityRepository activityRepository)
+        IActivityRepository activityRepository,
+        IUnitOfWork unitOfWork)
     {
         _logValueRepository = logValueRepository;
         _logRepository = logRepository;
         _definitionRepository = definitionRepository;
         _activityRepository = activityRepository;
+        _unitOfWork = unitOfWork;
     }
 
-    public async Task<IEnumerable<LogValueResponse>> ExecuteAsync(Guid userId, Guid logId, IEnumerable<LogValueRequest> values, CancellationToken cancellationToken = default)
+    public async Task<Result<IEnumerable<LogValueResponse>>> ExecuteAsync(Guid userId, Guid logId, IEnumerable<LogValueRequest> values, CancellationToken cancellationToken = default)
     {
         var log = await _logRepository.GetByIdAsync(logId, cancellationToken);
-        if (log == null) throw new Exception("El registro de actividad no existe.");
+        if (log == null)
+            return Result.Failure<IEnumerable<LogValueResponse>>(new Error("NotFound", "El registro de actividad no existe."));
 
         var activity = await _activityRepository.GetByIdAsync(log.ActivityId, cancellationToken);
-        if (activity == null || activity.UserId != userId) throw new Exception("No tienes acceso a este registro.");
+        if (activity == null || activity.UserId != userId)
+            return Result.Failure<IEnumerable<LogValueResponse>>(new Error("Forbidden", "No tienes acceso a este registro."));
 
         var definitions = await _definitionRepository.GetAllByActivityAsync(log.ActivityId, cancellationToken);
         var responses = new List<LogValueResponse>();
@@ -37,9 +43,14 @@ public class SaveLogValuesUseCase
         foreach (var valReq in values)
         {
             var def = definitions.FirstOrDefault(d => d.Id == valReq.ValueDefinitionId);
-            if (def == null) throw new Exception($"La definición de valor {valReq.ValueDefinitionId} no pertenece a esta actividad.");
+            if (def == null)
+                return Result.Failure<IEnumerable<LogValueResponse>>(new Error("Validation", $"La definición de valor {valReq.ValueDefinitionId} no pertenece a esta actividad."));
 
-            ValidateValueType(def, valReq.Value);
+            var validationResult = ValidateValueType(def, valReq.Value);
+            if (validationResult.IsFailure)
+            {
+                return Result.Failure<IEnumerable<LogValueResponse>>(validationResult.Error);
+            }
 
             var logValue = new ActivityLogValue(logId, valReq.ValueDefinitionId, valReq.Value);
             await _logValueRepository.AddAsync(logValue, cancellationToken);
@@ -47,34 +58,37 @@ public class SaveLogValuesUseCase
             responses.Add(new LogValueResponse(logValue.Id, logValue.ActivityLogId, logValue.ValueDefinitionId, logValue.Value));
         }
 
-        return responses;
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return Result.Success<IEnumerable<LogValueResponse>>(responses);
     }
 
-    private void ValidateValueType(ActivityValueDefinition def, string value)
+    private Result ValidateValueType(ActivityValueDefinition def, string value)
     {
         switch (def.ValueType)
         {
             case "Number":
                 if (!double.TryParse(value, out var num))
-                    throw new Exception($"El valor para '{def.Name}' debe ser un número válido.");
+                    return Result.Failure(new Error("Validation", $"El valor para '{def.Name}' debe ser un número válido."));
                 
                 if (!string.IsNullOrEmpty(def.MinValue) && double.TryParse(def.MinValue, out var min) && num < min)
-                    throw new Exception($"El valor para '{def.Name}' no puede ser menor a {def.MinValue}.");
+                    return Result.Failure(new Error("Validation", $"El valor para '{def.Name}' no puede ser menor a {def.MinValue}."));
                 
                 if (!string.IsNullOrEmpty(def.MaxValue) && double.TryParse(def.MaxValue, out var max) && num > max)
-                    throw new Exception($"El valor para '{def.Name}' no puede ser mayor a {def.MaxValue}.");
+                    return Result.Failure(new Error("Validation", $"El valor para '{def.Name}' no puede ser mayor a {def.MaxValue}."));
                 break;
 
             case "Boolean":
                 var lowerVal = value.ToLower();
                 if (lowerVal != "true" && lowerVal != "false" && lowerVal != "1" && lowerVal != "0")
-                    throw new Exception($"El valor para '{def.Name}' debe ser un booleano (true/false o 1/0).");
+                    return Result.Failure(new Error("Validation", $"El valor para '{def.Name}' debe ser un booleano (true/false o 1/0)."));
                 break;
 
             case "Time":
                 if (!TimeSpan.TryParse(value, out _))
-                    throw new Exception($"El valor para '{def.Name}' debe ser un formato de tiempo válido (HH:mm:ss).");
+                    return Result.Failure(new Error("Validation", $"El valor para '{def.Name}' debe ser un formato de tiempo válido (HH:mm:ss)."));
                 break;
         }
+
+        return Result.Success();
     }
 }

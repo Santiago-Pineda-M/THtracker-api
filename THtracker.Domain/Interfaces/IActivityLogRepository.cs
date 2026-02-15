@@ -13,5 +13,6 @@ public interface IActivityLogRepository
     Task UpdateAsync(ActivityLog log, CancellationToken cancellationToken = default);
     Task<IEnumerable<ActivityLog>> GetActiveLogsByUserAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<IEnumerable<ActivityLog>> GetOverlappingLogsAsync(Guid userId, DateTime start, DateTime end, Guid? excludeLogId = null, CancellationToken cancellationToken = default);
+    Task<IEnumerable<ActivityLog>> GetLogsInPeriodWithDetailsAsync(Guid userId, DateTime start, DateTime end, CancellationToken cancellationToken = default);
     Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 }

@@ -16,6 +16,7 @@ public class SaveLogValuesUseCaseTests
     private readonly Mock<IActivityLogRepository> _logRepositoryMock;
     private readonly Mock<IActivityValueDefinitionRepository> _definitionRepositoryMock;
     private readonly Mock<IActivityRepository> _activityRepositoryMock;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly SaveLogValuesUseCase _useCase;
 
     public SaveLogValuesUseCaseTests()
@@ -24,16 +25,20 @@ public class SaveLogValuesUseCaseTests
         _logRepositoryMock = new Mock<IActivityLogRepository>();
         _definitionRepositoryMock = new Mock<IActivityValueDefinitionRepository>();
         _activityRepositoryMock = new Mock<IActivityRepository>();
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
+        
         _useCase = new SaveLogValuesUseCase(
             _logValueRepositoryMock.Object,
             _logRepositoryMock.Object,
             _definitionRepositoryMock.Object,
-            _activityRepositoryMock.Object);
+            _activityRepositoryMock.Object,
+            _unitOfWorkMock.Object);
     }
 
     [Fact]
     public async Task ExecuteAsync_ShouldSaveValues_WhenValid()
     {
+        // Arrange
         var userId = Guid.NewGuid();
         var activityId = Guid.NewGuid();
         var logId = Guid.NewGuid();
@@ -47,15 +52,20 @@ public class SaveLogValuesUseCaseTests
         
         var requests = new List<LogValueRequest> { new LogValueRequest(definition.Id, "10") };
 
+        // Act
         var result = await _useCase.ExecuteAsync(userId, logId, requests);
 
-        result.Should().HaveCount(1);
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().HaveCount(1);
         _logValueRepositoryMock.Verify(x => x.AddAsync(It.IsAny<ActivityLogValue>(), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldThrow_WhenNumberIsInvalid()
+    public async Task ExecuteAsync_ShouldReturnFailure_WhenNumberIsInvalid()
     {
+        // Arrange
         var userId = Guid.NewGuid();
         var activityId = Guid.NewGuid();
         var logId = Guid.NewGuid();
@@ -69,14 +79,18 @@ public class SaveLogValuesUseCaseTests
 
         var requests = new List<LogValueRequest> { new LogValueRequest(definition.Id, "invalid") };
 
-        Func<Task> act = async () => await _useCase.ExecuteAsync(userId, logId, requests);
+        // Act
+        var result = await _useCase.ExecuteAsync(userId, logId, requests);
 
-        await act.Should().ThrowAsync<Exception>();
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Validation");
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldThrow_WhenUserDoesNotOwnLog()
+    public async Task ExecuteAsync_ShouldReturnFailure_WhenUserDoesNotOwnLog()
     {
+        // Arrange
         var userId = Guid.NewGuid();
         var otherUserId = Guid.NewGuid();
         var logId = Guid.NewGuid();
@@ -86,8 +100,11 @@ public class SaveLogValuesUseCaseTests
         _logRepositoryMock.Setup(x => x.GetByIdAsync(logId, It.IsAny<CancellationToken>())).ReturnsAsync(log);
         _activityRepositoryMock.Setup(x => x.GetByIdAsync(log.ActivityId, It.IsAny<CancellationToken>())).ReturnsAsync(activity);
 
-        Func<Task> act = async () => await _useCase.ExecuteAsync(userId, logId, new List<LogValueRequest>());
+        // Act
+        var result = await _useCase.ExecuteAsync(userId, logId, new List<LogValueRequest>());
 
-        await act.Should().ThrowAsync<Exception>().WithMessage("No tienes acceso a este registro.");
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Forbidden");
     }
 }

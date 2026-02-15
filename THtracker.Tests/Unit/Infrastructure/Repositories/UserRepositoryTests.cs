@@ -111,6 +111,7 @@ public class UserRepositoryTests : IDisposable
         await _context.SaveChangesAsync();
 
         var result = await _repository.DeleteAsync(user.Id);
+        await _context.SaveChangesAsync();
 
         result.Should().BeTrue();
         var userInDb = await _context.Users.FindAsync(user.Id);

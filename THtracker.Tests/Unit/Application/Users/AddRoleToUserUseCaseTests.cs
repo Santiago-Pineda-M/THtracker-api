@@ -11,12 +11,14 @@ namespace THtracker.Tests.Unit.Application.Users;
 public class AddRoleToUserUseCaseTests
 {
     private readonly Mock<IUserRoleRepository> _repositoryMock;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly AddRoleToUserUseCase _useCase;
 
     public AddRoleToUserUseCaseTests()
     {
         _repositoryMock = new Mock<IUserRoleRepository>();
-        _useCase = new AddRoleToUserUseCase(_repositoryMock.Object);
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _useCase = new AddRoleToUserUseCase(_repositoryMock.Object, _unitOfWorkMock.Object);
     }
 
     [Fact]
@@ -29,14 +31,16 @@ public class AddRoleToUserUseCaseTests
             .ReturnsAsync(false);
 
         // Act
-        await _useCase.ExecuteAsync(userId, roleId);
+        var result = await _useCase.ExecuteAsync(userId, roleId);
 
         // Assert
+        result.IsSuccess.Should().BeTrue();
         _repositoryMock.Verify(x => x.AddRoleToUserAsync(userId, roleId, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldThrowException_WhenRoleAlreadyAssigned()
+    public async Task ExecuteAsync_ShouldReturnFailure_WhenRoleAlreadyAssigned()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -45,10 +49,10 @@ public class AddRoleToUserUseCaseTests
             .ReturnsAsync(true);
 
         // Act
-        Func<Task> act = async () => await _useCase.ExecuteAsync(userId, roleId);
+        var result = await _useCase.ExecuteAsync(userId, roleId);
 
         // Assert
-        await act.Should().ThrowAsync<Exception>()
-            .WithMessage("Role is already assigned to this user.");
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Conflict");
     }
 }
