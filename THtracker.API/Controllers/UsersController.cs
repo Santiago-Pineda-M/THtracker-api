@@ -1,14 +1,18 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using THtracker.API.DTOs;
+using THtracker.Application.Constants;
 using THtracker.Application.DTOs.Users;
 using THtracker.Application.UseCases.Users;
 
 namespace THtracker.API.Controllers;
 
+/// <summary>
+/// Gestión de usuarios: autogestión (me) y CRUD administrativo.
+/// </summary>
 [ApiController]
 [Route("api/v1/users")]
-public class UsersController : ControllerBase
+public class UsersController : AuthorizedControllerBase
 {
     private readonly GetAllUsersUseCase _getAllUsers;
     private readonly GetUserByIdUseCase _getUserById;
@@ -32,53 +36,53 @@ public class UsersController : ControllerBase
     }
 
     /// <summary>
-    /// Obtiene la información del usuario autenticado (autogestión).
+    /// Obtiene los datos del usuario autenticado (autogestión).
     /// </summary>
     /// <returns>Información del usuario actual.</returns>
-    /// <response code="200">Retorna los datos del usuario.</response>
-    /// <response code="401">No autorizado.</response>
+    /// <response code="200">Datos del usuario.</response>
+    /// <response code="401">No autenticado.</response>
     /// <response code="404">Usuario no encontrado.</response>
     [Authorize]
     [HttpGet("me")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMe()
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId is null || !Guid.TryParse(userId, out var guid))
-            return Unauthorized();
-        var user = await _getUserById.ExecuteAsync(guid);
+        var userId = GetUserId();
+        var user = await _getUserById.ExecuteAsync(userId);
         return user is null ? NotFound() : Ok(user);
     }
 
     /// <summary>
-    /// Actualiza la información del usuario autenticado (autogestión).
+    /// Actualiza los datos del usuario autenticado (autogestión).
     /// </summary>
-    /// <param name="request">Nuevos datos del usuario.</param>
-    /// <response code="200">Usuario actualizado con éxito.</response>
-    /// <response code="401">No autorizado.</response>
+    /// <param name="request">Nombre y/o email nuevos.</param>
+    /// <returns>Usuario actualizado.</returns>
+    /// <response code="200">Actualización correcta.</response>
+    /// <response code="401">No autenticado.</response>
     /// <response code="404">Usuario no encontrado.</response>
     [Authorize]
     [HttpPut("me")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateMe([FromBody] UpdateUserRequest request)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId is null || !Guid.TryParse(userId, out var guid))
-            return Unauthorized();
-        var user = await _updateUser.ExecuteAsync(guid, request);
+        var userId = GetUserId();
+        var user = await _updateUser.ExecuteAsync(userId, request);
         return user is null ? NotFound() : Ok(user);
     }
 
     /// <summary>
-    /// Obtiene la lista de todos los usuarios registrados (Solo Administradores).
+    /// Lista todos los usuarios (solo Admin).
     /// </summary>
-    [Authorize(Roles = "Administrador")]
+    /// <returns>Lista de usuarios.</returns>
+    /// <response code="200">Lista de usuarios.</response>
+    /// <response code="403">Sin rol Admin.</response>
+    [Authorize(Roles = DefaultRoles.Admin)]
     [HttpGet]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IEnumerable<UserDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Get()
     {
@@ -87,12 +91,17 @@ public class UsersController : ControllerBase
     }
 
     /// <summary>
-    /// Obtiene un usuario específico por su ID (Solo Administradores).
+    /// Obtiene un usuario por su ID (solo Admin).
     /// </summary>
     /// <param name="id">ID único del usuario.</param>
-    [Authorize(Roles = "Administrador")]
+    /// <returns>Usuario encontrado.</returns>
+    /// <response code="200">Usuario.</response>
+    /// <response code="403">Sin rol Admin.</response>
+    /// <response code="404">Usuario no encontrado.</response>
+    [Authorize(Roles = DefaultRoles.Admin)]
     [HttpGet("{id}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id)
     {
@@ -101,27 +110,44 @@ public class UsersController : ControllerBase
     }
 
     /// <summary>
-    /// Crea un nuevo usuario manualmente (Solo Administradores).
+    /// Crea un nuevo usuario (solo Admin).
     /// </summary>
-    /// <param name="request">Datos para la creación del usuario.</param>
-    [Authorize(Roles = "Administrador")]
+    /// <param name="request">Nombre, email y contraseña.</param>
+    /// <returns>Usuario creado y ubicación en cabecera Location.</returns>
+    /// <response code="201">Usuario creado.</response>
+    /// <response code="400">Datos inválidos o email duplicado.</response>
+    /// <response code="403">Sin rol Admin.</response>
+    [Authorize(Roles = DefaultRoles.Admin)]
     [HttpPost]
-    [ProducesResponseType(StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Create([FromBody] CreateUserRequest request)
     {
-        var user = await _createUser.ExecuteAsync(request);
-        return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
+        try
+        {
+            var user = await _createUser.ExecuteAsync(request);
+            return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new ApiErrorResponse(ex.Message));
+        }
     }
 
     /// <summary>
-    /// Actualiza un usuario existente (Solo Administradores).
+    /// Actualiza un usuario por ID (solo Admin).
     /// </summary>
-    /// <param name="id">ID del usuario a actualizar.</param>
-    /// <param name="request">Nuevos datos para el usuario.</param>
-    [Authorize(Roles = "Administrador")]
+    /// <param name="id">ID del usuario.</param>
+    /// <param name="request">Nombre y/o email nuevos.</param>
+    /// <returns>Usuario actualizado.</returns>
+    /// <response code="200">Actualización correcta.</response>
+    /// <response code="403">Sin rol Admin.</response>
+    /// <response code="404">Usuario no encontrado.</response>
+    [Authorize(Roles = DefaultRoles.Admin)]
     [HttpPut("{id}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateUserRequest request)
     {
@@ -130,12 +156,16 @@ public class UsersController : ControllerBase
     }
 
     /// <summary>
-    /// Elimina un usuario del sistema (Solo Administradores).
+    /// Elimina un usuario por ID (solo Admin).
     /// </summary>
     /// <param name="id">ID del usuario a eliminar.</param>
-    [Authorize(Roles = "Administrador")]
+    /// <response code="204">Eliminado correctamente.</response>
+    /// <response code="403">Sin rol Admin.</response>
+    /// <response code="404">Usuario no encontrado.</response>
+    [Authorize(Roles = DefaultRoles.Admin)]
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id)
     {

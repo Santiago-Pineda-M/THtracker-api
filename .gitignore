@@ -485,3 +485,4 @@ $RECYCLE.BIN/
 
 # db files
 *.db
+thtracker_dev.db

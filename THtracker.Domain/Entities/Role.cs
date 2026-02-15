@@ -3,7 +3,7 @@ namespace THtracker.Domain.Entities;
 public class Role
 {
     public Guid Id { get; private set; }
-    public string Name { get; private set; }
+    public string Name { get; private set; } = null!;
 
     private readonly List<Permission> _permissions = new();
     public IReadOnlyCollection<Permission> Permissions => _permissions.AsReadOnly();

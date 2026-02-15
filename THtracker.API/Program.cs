@@ -15,10 +15,13 @@ using THtracker.Application.UseCases.Activities;
 using THtracker.Application.UseCases.ActivityLogs;
 using THtracker.Application.UseCases.ActivityValueDefinitions;
 using THtracker.Application.UseCases.ActivityLogValues;
+using THtracker.Application.UseCases.Seed;
 using THtracker.Application.Validators.Users;
+using THtracker.Application.DTOs.Seed;
 using THtracker.Domain.Interfaces;
 using THtracker.Infrastructure.Persistence;
 using THtracker.Infrastructure.Repositories;
+using THtracker.Infrastructure.Seeding;
 using THtracker.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -118,7 +121,11 @@ builder.Services.AddScoped<UpdateUserUseCase>();
 builder.Services.AddScoped<DeleteUserUseCase>();
 
 // Application Layer - Use Cases (Roles)
+builder.Services.AddScoped<GetAllRolesUseCase>();
+builder.Services.AddScoped<GetRoleByIdUseCase>();
 builder.Services.AddScoped<GetRoleByNameUseCase>();
+builder.Services.AddScoped<CreateRoleUseCase>();
+builder.Services.AddScoped<DeleteRoleUseCase>();
 builder.Services.AddScoped<GetUserRolesUseCase>();
 builder.Services.AddScoped<AddRoleToUserUseCase>();
 builder.Services.AddScoped<RemoveRoleFromUserUseCase>();
@@ -138,6 +145,8 @@ builder.Services.AddScoped<UpdateActivityUseCase>();
 builder.Services.AddScoped<DeleteActivityUseCase>();
 
 // Application Layer - Use Cases (Activity Logs)
+builder.Services.AddScoped<GetActivityLogsByActivityUseCase>();
+builder.Services.AddScoped<GetActivityLogByIdUseCase>();
 builder.Services.AddScoped<StartActivityUseCase>();
 builder.Services.AddScoped<StopActivityUseCase>();
 builder.Services.AddScoped<UpdateActivityLogUseCase>();
@@ -145,19 +154,20 @@ builder.Services.AddScoped<UpdateActivityLogUseCase>();
 // Application Layer - Use Cases (Value Definitions)
 builder.Services.AddScoped<CreateValueDefinitionUseCase>();
 builder.Services.AddScoped<GetValueDefinitionsUseCase>();
+builder.Services.AddScoped<GetValueDefinitionByIdUseCase>();
 
 // Application Layer - Use Cases (Log Values)
 builder.Services.AddScoped<SaveLogValuesUseCase>();
-
-// builder.Services.AddScoped<GetAllActivityLogsUseCase>();
-// builder.Services.AddScoped<GetActivityLogByIdUseCase>();
-// builder.Services.AddScoped<DeleteActivityLogUseCase>();
 
 // Application Layer - Use Cases (Auth)
 builder.Services.AddScoped<RegisterUserUseCase>();
 builder.Services.AddScoped<LoginUserUseCase>();
 builder.Services.AddScoped<RefreshTokenUseCase>();
 builder.Services.AddScoped<SocialLoginUseCase>();
+
+// Application Layer - Use Cases (Seed) - puerto IDataSeeder implementado en Infrastructure
+builder.Services.AddScoped<IDataSeeder, DataSeeder>();
+builder.Services.AddScoped<SeedDefaultDataUseCase>();
 
 // FluentValidation
 builder.Services.AddValidatorsFromAssemblyContaining<CreateUserRequestValidator>();
@@ -185,5 +195,18 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Seed por defecto (Clean Architecture: Presentation solo invoca UseCase; persistencia vía IDataSeeder en Infrastructure)
+using (var scope = app.Services.CreateScope())
+{
+    var seedUseCase = scope.ServiceProvider.GetRequiredService<SeedDefaultDataUseCase>();
+    var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+    var input = new SeedDefaultDataInput(
+        config["Seed:DefaultAdminEmail"] ?? "",
+        config["Seed:DefaultAdminPassword"] ?? "",
+        config["Seed:DefaultAdminName"] ?? "Administrator"
+    );
+    await seedUseCase.ExecuteAsync(input);
+}
 
 app.Run();

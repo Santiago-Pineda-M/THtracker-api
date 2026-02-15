@@ -2,44 +2,44 @@ using FluentAssertions;
 using Moq;
 using THtracker.Application.UseCases.Users;
 using THtracker.Domain.Interfaces;
-using Xunit;
 
-namespace THtracker.Tests.Unit.Application.Users;
-
-[Trait("Category", "Unit")]
-[Trait("Layer", "Application")]
-public class DeleteUserUseCaseTests
+namespace THtracker.Tests.Unit.Application.Users
 {
-    private readonly Mock<IUserRepository> _repositoryMock;
-    private readonly DeleteUserUseCase _useCase;
-
-    public DeleteUserUseCaseTests()
+    [Trait("Category", "Unit")]
+    [Trait("Layer", "Application")]
+    public class DeleteUserUseCaseTests
     {
-        _repositoryMock = new Mock<IUserRepository>();
-        _useCase = new DeleteUserUseCase(_repositoryMock.Object);
-    }
+        private readonly Mock<IUserRepository> _repositoryMock;
+        private readonly DeleteUserUseCase _useCase;
 
-    [Fact]
-    public async Task ExecuteAsync_ShouldReturnTrue_WhenUserIsDeleted()
-    {
-        var userId = Guid.NewGuid();
-        _repositoryMock.Setup(x => x.DeleteAsync(userId)).ReturnsAsync(true);
+        public DeleteUserUseCaseTests()
+        {
+            _repositoryMock = new Mock<IUserRepository>();
+            _useCase = new DeleteUserUseCase(_repositoryMock.Object);
+        }
 
-        var result = await _useCase.ExecuteAsync(userId);
+        [Fact]
+        public async Task ExecuteAsyncShouldReturnTrueWhenUserIsDeleted()
+        {
+            Guid userId = Guid.NewGuid();
+            _ = _repositoryMock.Setup(x => x.DeleteAsync(userId)).ReturnsAsync(true);
 
-        result.Should().BeTrue();
-        _repositoryMock.Verify(x => x.DeleteAsync(userId), Times.Once);
-    }
+            bool result = await _useCase.ExecuteAsync(userId);
 
-    [Fact]
-    public async Task ExecuteAsync_ShouldReturnFalse_WhenUserDoesNotExist()
-    {
-        var userId = Guid.NewGuid();
-        _repositoryMock.Setup(x => x.DeleteAsync(userId)).ReturnsAsync(false);
+            _ = result.Should().BeTrue();
+            _repositoryMock.Verify(x => x.DeleteAsync(userId), Times.Once);
+        }
 
-        var result = await _useCase.ExecuteAsync(userId);
+        [Fact]
+        public async Task ExecuteAsyncShouldReturnFalseWhenUserDoesNotExist()
+        {
+            Guid userId = Guid.NewGuid();
+            _ = _repositoryMock.Setup(x => x.DeleteAsync(userId)).ReturnsAsync(false);
 
-        result.Should().BeFalse();
-        _repositoryMock.Verify(x => x.DeleteAsync(userId), Times.Once);
+            bool result = await _useCase.ExecuteAsync(userId);
+
+            _ = result.Should().BeFalse();
+            _repositoryMock.Verify(x => x.DeleteAsync(userId), Times.Once);
+        }
     }
 }

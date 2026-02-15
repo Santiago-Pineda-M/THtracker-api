@@ -5,7 +5,7 @@ public class ActivityLogValue
     public Guid Id { get; private set; }
     public Guid ActivityLogId { get; private set; }
     public Guid ValueDefinitionId { get; private set; }
-    public string Value { get; private set; }
+    public string Value { get; private set; } = null!;
 
     private ActivityLogValue() { }
 

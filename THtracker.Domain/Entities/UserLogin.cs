@@ -3,8 +3,8 @@ namespace THtracker.Domain.Entities;
 public class UserLogin
 {
     public Guid Id { get; private set; }
-    public string LoginProvider { get; private set; } // e.g., "Google", "Facebook"
-    public string ProviderKey { get; private set; } // User ID from the provider
+    public string LoginProvider { get; private set; } = null!; // e.g., "Google", "Facebook"
+    public string ProviderKey { get; private set; } = null!; // User ID from the provider
     public string? ProviderDisplayName { get; private set; }
     public Guid UserId { get; private set; }
 

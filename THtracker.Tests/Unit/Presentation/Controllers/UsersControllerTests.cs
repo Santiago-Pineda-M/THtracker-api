@@ -31,7 +31,8 @@ public class UsersControllerTests
             _getUserByIdMock.Object,
             _createUserMock.Object,
             _updateUserMock.Object,
-            _deleteUserMock.Object);
+            _deleteUserMock.Object
+        );
     }
 
     [Fact]
@@ -40,7 +41,7 @@ public class UsersControllerTests
         var users = new List<UserDto>
         {
             new UserDto(Guid.NewGuid(), "User 1", "user1@example.com"),
-            new UserDto(Guid.NewGuid(), "User 2", "user2@example.com")
+            new UserDto(Guid.NewGuid(), "User 2", "user2@example.com"),
         };
         _getAllUsersMock.Setup(x => x.ExecuteAsync()).ReturnsAsync(users);
 

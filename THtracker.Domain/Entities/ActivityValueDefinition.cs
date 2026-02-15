@@ -4,8 +4,8 @@ public class ActivityValueDefinition
 {
     public Guid Id { get; private set; }
     public Guid ActivityId { get; private set; }
-    public string Name { get; private set; }
-    public string ValueType { get; private set; }
+    public string Name { get; private set; } = null!;
+    public string ValueType { get; private set; } = null!;
     public bool IsRequired { get; private set; }
     public string? Unit { get; private set; }
     public string? MinValue { get; private set; }

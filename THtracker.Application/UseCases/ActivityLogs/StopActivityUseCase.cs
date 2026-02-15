@@ -29,13 +29,14 @@ public class StopActivityUseCase
 
         log.Stop(DateTime.UtcNow);
         await _logRepository.UpdateAsync(log, cancellationToken);
-        
+
+        var endedAt = log.EndedAt!.Value;
         return new ActivityLogResponse(
-            log.Id, 
-            log.ActivityId, 
-            log.StartedAt, 
-            log.EndedAt, 
-            (log.EndedAt.Value - log.StartedAt).TotalMinutes
+            log.Id,
+            log.ActivityId,
+            log.StartedAt,
+            log.EndedAt,
+            (endedAt - log.StartedAt).TotalMinutes
         );
     }
 }

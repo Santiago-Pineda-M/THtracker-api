@@ -3,11 +3,11 @@ namespace THtracker.Domain.Entities;
 public class RefreshToken
 {
     public Guid Id { get; private set; }
-    public string Token { get; private set; }
+    public string Token { get; private set; } = null!;
     public DateTime ExpiryDate { get; private set; }
     public DateTime CreatedDate { get; private set; }
-    public string CreatedByIp { get; private set; }
-    public string DeviceInfo { get; private set; } // e.g., "Chrome on Windows"
+    public string CreatedByIp { get; private set; } = null!;
+    public string DeviceInfo { get; private set; } = null!; // e.g., "Chrome on Windows"
     
     public DateTime? RevokedDate { get; private set; }
     public string? RevokedByIp { get; private set; }

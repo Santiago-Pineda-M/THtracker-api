@@ -4,7 +4,7 @@ public class UserSession
 {
     public Guid Id { get; private set; }
     public Guid UserId { get; private set; }
-    public string SessionToken { get; private set; }
+    public string SessionToken { get; private set; } = null!;
     public DateTime CreatedAt { get; private set; }
     public DateTime ExpiresAt { get; private set; }
     public bool IsActive { get; private set; }

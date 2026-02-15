@@ -161,6 +161,21 @@ Traduce protocolos externos a invocaciones de casos de uso.
 
 Presentation coordina protocolos, no procesos.
 
+### 7.5 Convenciones de Controladores
+
+* Heredar de `AuthorizedControllerBase` cuando requieran usuario autenticado para acceder al claim NameIdentifier de forma consistente.
+* No contener lógica de negocio; delegar en UseCases de Application.
+* Usar atributos `[Authorize]` y `[Authorize(Roles = ...)]` según corresponda.
+* Validar formato y usar `[FromBody]`/`[FromRoute]`/`[FromQuery]` explícitos.
+* Mapear Request → Input del UseCase y Output → `IActionResult` con códigos adecuados (200, 201, 204, 404, 403, 401).
+* Documentar respuestas con `ProducesResponseType`.
+
+### 7.6 Manejo de Errores en Presentation
+
+* Errores de negocio desde Application deben traducirse a 400 (BadRequest) con payload consistente (`ApiErrorResponse`).
+* Autenticación/Autorización: 401 cuando no autenticado, 403 cuando no autorizado/dueño.
+* Nunca lanzar excepciones desde Presentation por lógica de negocio; capturar y mapear.
+
 ## 8. DTOs (Definición y Ubicación)
 
 ### 8.1 Definición
@@ -228,6 +243,12 @@ No debe introducirse si no resuelve un problema real.
 * **Application (`THtracker.Application`)** → Use Case Tests
 * **Infrastructure (`THtracker.Infrastructure`)** → Integration Tests
 * **Presentation (`THtracker.API`)** → API/UI Tests
+
+### 12.1 Pruebas de Presentation
+
+* Unit: tests de controladores que verifican el mapeo de UseCases a respuestas HTTP usando Moq y FluentAssertions.
+* Integration (recomendado): pruebas con Microsoft.AspNetCore.Mvc.Testing y `WebApplicationFactory` para validar pipeline, autenticación JWT y políticas `[Authorize]`, incluyendo 401/403.
+* Filtrado por Traits: `Category=Unit` y `Layer=Presentation` para ejecución selectiva.
 
 ## 13. Reglas de Decisión para Agentes de IA
 
