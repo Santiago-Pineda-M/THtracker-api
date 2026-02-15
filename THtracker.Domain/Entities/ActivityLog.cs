@@ -19,7 +19,7 @@ public class ActivityLog
     public void UpdatePeriod(DateTime startedAt, DateTime? endedAt)
     {
         if (endedAt.HasValue && endedAt.Value < startedAt)
-            throw new Exception("La fecha de fin no puede ser anterior a la de inicio.");
+            throw new ArgumentException("La fecha de fin no puede ser anterior a la de inicio.", nameof(endedAt));
             
         StartedAt = startedAt;
         EndedAt = endedAt;
@@ -28,7 +28,7 @@ public class ActivityLog
     public void Stop(DateTime endedAt)
     {
         if (endedAt < StartedAt)
-            throw new Exception("La fecha de fin no puede ser anterior a la de inicio.");
+            throw new ArgumentException("La fecha de fin no puede ser anterior a la de inicio.", nameof(endedAt));
             
         EndedAt = endedAt;
     }

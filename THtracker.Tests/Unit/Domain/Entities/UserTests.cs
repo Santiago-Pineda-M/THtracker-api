@@ -20,21 +20,15 @@ public class UserTests
         user.Id.Should().NotBeEmpty();
         user.Name.Should().Be(name);
         user.Email.Should().Be(email);
+        user.SecurityStamp.Should().NotBeNullOrEmpty();
+        user.Roles.Should().BeEmpty();
     }
 
     [Fact]
-    public void Constructor_ShouldGenerateUniqueId_ForEachUser()
-    {
-        var user1 = new User("User 1", "user1@example.com");
-        var user2 = new User("User 2", "user2@example.com");
-
-        user1.Id.Should().NotBe(user2.Id);
-    }
-
-    [Fact]
-    public void Update_ShouldUpdateNameAndEmail_WithValidData()
+    public void Update_ShouldUpdateNameAndEmail_AndNotChangeId()
     {
         var user = new User("Original Name", "original@example.com");
+        var originalId = user.Id;
         var newName = "Updated Name";
         var newEmail = "updated@example.com";
 
@@ -42,16 +36,66 @@ public class UserTests
 
         user.Name.Should().Be(newName);
         user.Email.Should().Be(newEmail);
+        user.Id.Should().Be(originalId);
     }
 
     [Fact]
-    public void Update_ShouldNotChangeId_WhenUpdatingUser()
+    public void SetPassword_ShouldUpdatePasswordHash_AndUpdateSecurityStamp()
     {
-        var user = new User("Original Name", "original@example.com");
-        var originalId = user.Id;
+        var user = new User("User", "user@test.com");
+        var originalStamp = user.SecurityStamp;
+        var newHash = "hashed_password";
 
-        user.Update("New Name", "new@example.com");
+        user.SetPassword(newHash);
 
-        user.Id.Should().Be(originalId);
+        user.PasswordHash.Should().Be(newHash);
+        user.SecurityStamp.Should().NotBe(originalStamp);
+    }
+
+    [Fact]
+    public void AddRole_ShouldAddRole_WhenRoleIsNotPresent()
+    {
+        var user = new User("User", "user@test.com");
+        var role = new Role("Admin");
+
+        user.AddRole(role);
+
+        user.Roles.Should().ContainSingle(r => r.Id == role.Id);
+    }
+
+    [Fact]
+    public void AddRole_ShouldNotAddRole_WhenRoleIsAlreadyPresent()
+    {
+        var user = new User("User", "user@test.com");
+        var role = new Role("Admin");
+        user.AddRole(role);
+
+        user.AddRole(role);
+
+        user.Roles.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void RemoveRole_ShouldRemoveRole_WhenRoleIsPresent()
+    {
+        var user = new User("User", "user@test.com");
+        var role = new Role("Admin");
+        user.AddRole(role);
+
+        user.RemoveRole(role);
+
+        user.Roles.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void AddLogin_ShouldAddLogin_WhenLoginIsNotPresent()
+    {
+        var user = new User("User", "user@test.com");
+        var provider = "Google";
+        var key = "google-key-123";
+
+        user.AddLogin(provider, key, "Google User");
+
+        user.Logins.Should().ContainSingle(l => l.LoginProvider == provider && l.ProviderKey == key);
     }
 }

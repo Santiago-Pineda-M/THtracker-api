@@ -2,7 +2,7 @@ using FluentAssertions;
 using THtracker.Domain.Entities;
 using Xunit;
 
-namespace THtracker.Tests.Unit.Domain;
+namespace THtracker.Tests.Unit.Domain.Entities;
 
 public class ActivityLogTests
 {
@@ -81,6 +81,38 @@ public class ActivityLogTests
         Action act = () => log.Stop(invalidEnd);
 
         // Assert
-        act.Should().Throw<Exception>().WithMessage("La fecha de fin no puede ser anterior a la de inicio.");
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("La fecha de fin no puede ser anterior a la de inicio. *");
+    }
+
+    [Fact]
+    public void UpdatePeriod_ShouldThrowException_WhenEndBeforeStart()
+    {
+        // Arrange
+        var log = new ActivityLog(Guid.NewGuid(), new DateTime(2024, 1, 1, 12, 0, 0));
+        var invalidEnd = new DateTime(2024, 1, 1, 10, 0, 0);
+
+        // Act
+        Action act = () => log.UpdatePeriod(log.StartedAt, invalidEnd);
+
+        // Assert
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("La fecha de fin no puede ser anterior a la de inicio. *");
+    }
+
+    [Fact]
+    public void UpdatePeriod_ShouldUpdateValues_WhenValid()
+    {
+        // Arrange
+        var log = new ActivityLog(Guid.NewGuid(), new DateTime(2024, 1, 1, 10, 0, 0));
+        var newStart = new DateTime(2024, 1, 1, 11, 0, 0);
+        var newEnd = new DateTime(2024, 1, 1, 12, 0, 0);
+
+        // Act
+        log.UpdatePeriod(newStart, newEnd);
+
+        // Assert
+        log.StartedAt.Should().Be(newStart);
+        log.EndedAt.Should().Be(newEnd);
     }
 }

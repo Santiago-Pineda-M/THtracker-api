@@ -2,7 +2,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
-using THtracker.API.Controllers;
+using THtracker.API.Controllers.v1;
 using THtracker.Application.DTOs.Users;
 using THtracker.Application.UseCases.Users;
 using THtracker.Domain.Common;
