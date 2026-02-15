@@ -4,14 +4,14 @@ using THtracker.API.Extensions;
 using THtracker.Application.DTOs.Activities;
 using THtracker.Application.UseCases.Activities;
 
-namespace THtracker.API.Controllers;
+namespace THtracker.API.Controllers.v1;
 
 /// <summary>
 /// Actividades del sistema (CRUD para el usuario autenticado).
 /// </summary>
 [Authorize]
 [ApiController]
-[Route("api/v1/activities")]
+[Route("activities")]
 public class ActivitiesController : AuthorizedControllerBase
 {
     private readonly GetAllActivitiesUseCase _getActivitiesByUser;

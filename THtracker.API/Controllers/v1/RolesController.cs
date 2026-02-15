@@ -5,13 +5,13 @@ using THtracker.Application.Constants;
 using THtracker.Application.DTOs.Roles;
 using THtracker.Application.UseCases.Roles;
 
-namespace THtracker.API.Controllers;
+namespace THtracker.API.Controllers.v1;
 
 /// <summary>
 /// Gestión de roles del sistema (solo Admin).
 /// </summary>
 [ApiController]
-[Route("api/v1/roles")]
+[Route("roles")]
 public class RolesController : ControllerBase
 {
     private readonly GetAllRolesUseCase _getAllRoles;

@@ -3,13 +3,13 @@ using THtracker.API.Extensions;
 using THtracker.Application.DTOs.Auth;
 using THtracker.Application.UseCases.Auth;
 
-namespace THtracker.API.Controllers;
+namespace THtracker.API.Controllers.v1;
 
 /// <summary>
 /// Autenticación: registro, login, refresh token y login social.
 /// </summary>
 [ApiController]
-[Route("api/v1/auth")]
+[Route("auth")]
 public class AuthController : ControllerBase
 {
     private readonly RegisterUserUseCase _registerUser;

@@ -5,13 +5,13 @@ using THtracker.Application.Constants;
 using THtracker.Application.DTOs.Users;
 using THtracker.Application.UseCases.Users;
 
-namespace THtracker.API.Controllers;
+namespace THtracker.API.Controllers.v1;
 
 /// <summary>
 /// Gestión de usuarios: autogestión (me) y CRUD administrativo.
 /// </summary>
 [ApiController]
-[Route("api/v1/users")]
+[Route("users")]
 public class UsersController : AuthorizedControllerBase
 {
     private readonly GetAllUsersUseCase _getAllUsers;

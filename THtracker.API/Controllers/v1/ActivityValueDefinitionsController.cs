@@ -4,14 +4,14 @@ using THtracker.API.Extensions;
 using THtracker.Application.DTOs.ActivityValueDefinitions;
 using THtracker.Application.UseCases.ActivityValueDefinitions;
 
-namespace THtracker.API.Controllers;
+namespace THtracker.API.Controllers.v1;
 
 /// <summary>
 /// Definiciones de valores medibles por actividad.
 /// </summary>
 [Authorize]
 [ApiController]
-[Route("api/v1/activities/{activityId:guid}/definitions")]
+[Route("activities/{activityId:guid}/definitions")]
 public class ActivityValueDefinitionsController : AuthorizedControllerBase
 {
     private readonly GetValueDefinitionsUseCase _getDefinitions;

@@ -1,6 +1,8 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.OpenApi.Models;
-using Swashbuckle.AspNetCore.SwaggerGen;
+using Microsoft.AspNetCore.Mvc;
+using THtracker.API.Extensions;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -17,7 +19,7 @@ using THtracker.Application.UseCases.ActivityValueDefinitions;
 using THtracker.Application.UseCases.ActivityLogValues;
 using THtracker.Application.UseCases.Reports;
 using THtracker.Application.UseCases.Seed;
-using THtracker.Application.Validators.Users;
+using THtracker.Application;
 using THtracker.Application.DTOs.Seed;
 using THtracker.Domain.Interfaces;
 using THtracker.Infrastructure.Persistence;
@@ -25,6 +27,7 @@ using THtracker.Infrastructure.Repositories;
 using THtracker.Infrastructure.Seeding;
 using THtracker.Infrastructure.Services;
 using THtracker.API.Middlewares;
+using THtracker.API.Routing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,40 +35,12 @@ var builder = WebApplication.CreateBuilder(args);
 // Services
 // =======================
 
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
+builder.Services.AddControllers(options =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "THtracker API", Version = "v1" });
-
-    // Define the Bearer Auth scheme
-    var securityScheme = new OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Description = "Introduce el token JWT de esta manera: Bearer {tu_token}",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        Reference = new OpenApiReference
-        {
-            Id = "Bearer",
-            Type = ReferenceType.SecurityScheme
-        }
-    };
-
-    c.AddSecurityDefinition(securityScheme.Reference.Id, securityScheme);
-
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        { securityScheme, Array.Empty<string>() }
-    });
-
-    // XML Comments
-    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    c.IncludeXmlComments(xmlPath);
+    options.Conventions.Add(new ApiVersioningConvention());
 });
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerDocumentation();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Default"))
@@ -176,7 +151,7 @@ builder.Services.AddScoped<IDataSeeder, DataSeeder>();
 builder.Services.AddScoped<SeedDefaultDataUseCase>();
 
 // FluentValidation
-builder.Services.AddValidatorsFromAssemblyContaining<CreateUserRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<IApplicationAssemblyMarker>();
 builder.Services.AddFluentValidationAutoValidation();
 
 // =======================
@@ -193,8 +168,7 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerDocumentation();
 }
 
 app.UseHttpsRedirection();

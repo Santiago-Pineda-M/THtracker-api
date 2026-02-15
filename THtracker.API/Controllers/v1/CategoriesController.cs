@@ -4,14 +4,14 @@ using THtracker.API.Extensions;
 using THtracker.Application.DTOs.Categories;
 using THtracker.Application.UseCases.Categories;
 
-namespace THtracker.API.Controllers;
+namespace THtracker.API.Controllers.v1;
 
 /// <summary>
 /// Categorías de actividades del sistema.
 /// </summary>
 [Authorize]
 [ApiController]
-[Route("api/v1/categories")]
+[Route("categories")]
 public class CategoriesController : AuthorizedControllerBase
 {
     private readonly GetAllCategoriesUseCase _getCategoriesByUser;

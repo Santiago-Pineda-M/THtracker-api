@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace THtracker.API.Controllers;
+namespace THtracker.API.Controllers.v1;
 
 /// <summary>
 /// Comprobación de estado del servicio (health check).
 /// </summary>
 [ApiController]
-[Route("api/v1/health")]
+[Route("health")]
 public class HealthController : ControllerBase
 {
     /// <summary>

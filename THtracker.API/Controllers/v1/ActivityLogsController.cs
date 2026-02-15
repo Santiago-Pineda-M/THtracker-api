@@ -6,14 +6,14 @@ using THtracker.Application.DTOs.ActivityLogValues;
 using THtracker.Application.UseCases.ActivityLogs;
 using THtracker.Application.UseCases.ActivityLogValues;
 
-namespace THtracker.API.Controllers;
+namespace THtracker.API.Controllers.v1;
 
 /// <summary>
 /// Registros de actividad (inicio/parada, actualización, valores y consulta).
 /// </summary>
 [Authorize]
 [ApiController]
-[Route("api/v1/activity-logs")]
+[Route("activity-logs")]
 public class ActivityLogsController : AuthorizedControllerBase
 {
     private readonly GetActivityLogsByActivityUseCase _getLogsByActivity;

@@ -6,13 +6,13 @@ using THtracker.Application.DTOs.Roles;
 using THtracker.Application.DTOs.Users;
 using THtracker.Application.UseCases.Users;
 
-namespace THtracker.API.Controllers;
+namespace THtracker.API.Controllers.v1;
 
 /// <summary>
 /// Asignación de roles a usuarios (solo Admin).
 /// </summary>
 [ApiController]
-[Route("api/v1/users/{userId:guid}/roles")]
+[Route("users/{userId:guid}/roles")]
 [Authorize(Roles = DefaultRoles.Admin)]
 public class UserRolesController : ControllerBase
 {

@@ -4,14 +4,14 @@ using THtracker.API.Extensions;
 using THtracker.Application.DTOs.Reports;
 using THtracker.Application.UseCases.Reports;
 
-namespace THtracker.API.Controllers;
+namespace THtracker.API.Controllers.v1;
 
 /// <summary>
 /// Reportes y estadísticas de actividad.
 /// </summary>
 [Authorize]
 [ApiController]
-[Route("api/v1/reports")]
+[Route("reports")]
 public class ReportsController : AuthorizedControllerBase
 {
     private readonly GetUserActivityReportUseCase _getReport;
