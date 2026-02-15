@@ -10,14 +10,15 @@ Este documento no describe intenciones, describe reglas ejecutables.
 
 ## 1. Definición General de Clean Architecture
 
-Clean Architecture es un modelo arquitectónico basado en:
+Clean Architecture es un modelo arquitectónico basado en los principios SOLID y el patrón de arquitectura hexagonal (Ports & Adapters), cuyos pilares son:
 
-* aración estricta de responsabilidades
-* Independencia del dominio respecto a frameworks
-* Regla de dependencia hacia el núcleo
-* Uso de abstracciones como puntos de acoplamiento
+* **Independencia de Frameworks:** La arquitectura no depende de la existencia de alguna librería de software.
+* **Testabilidad:** Las reglas de negocio se pueden probar sin la interfaz de usuario, base de datos, servidor web o cualquier otro elemento externo.
+* **Independencia de la UI:** La UI puede cambiar fácilmente sin cambiar el resto del sistema.
+* **Independencia de la Base de Datos:** Se puede intercambiar el motor de persistencia sin afectar las reglas de negocio.
+* **Regla de Dependencia:** Las dependencias de código solo pueden apuntar hacia adentro, hacia los círculos de mayor nivel (Políticas de Negocio).
 
-La arquitectura se organiza en capas concéntricas, no jerárquicas.
+La arquitectura se organiza en capas concéntricas donde el flujo de control se invierte mediante interfaces para mantener el desacoplamiento.
 
 ## 2. Capas del Sistema (Definición Formal)
 
@@ -53,6 +54,8 @@ Toda dependencia debe apuntar hacia capas más internas.
 * `THtracker.Domain` → frameworks, librerías externas, DTOs
 * `THtracker.Domain` → detalles técnicos
 
+**Nota sobre la raíz de composición (Composition Root):** El proyecto `Presentation` (API) puede tener una referencia física a `Infrastructure` exclusivamente para la configuración de la Inyección de Dependencias en `Program.cs`. El uso de clases concretas de infraestructura fuera de esta configuración está estrictamente prohibido.
+
 Violación de esta regla invalida la arquitectura.
 
 ## 4. Capa Domain (NÚCLEO DEL SISTEMA)
@@ -64,11 +67,13 @@ Contiene las reglas que definen qué es válido o inválido en el sistema, indep
 
 ### 4.2 Responsabilidades Permitidas
 
-* Entidades de dominio con comportamiento
-* Value Objects
-* Reglas de negocio invariantes
-* Excepciones de dominio
-* Interfaces solo si representan conceptos del dominio
+* **Entidades (Aggregates):** Objetos con identidad única que encapsulan estado y comportamiento. Son el punto de entrada para cambios de estado (Garantizan invariantes).
+* **Value Objects:** Objetos sin identidad definidos por sus atributos (ej. Email, Dinero). Deben ser inmutables.
+* **Reglas de Negocio Invariantes:** Lógica que debe ser siempre verdadera para que el sistema sea consistente.
+* **Domain Services:** Lógica que involucra múltiples entidades y no pertenece naturalmente a una sola.
+* **Interfaces (Interfaces/Ports):** Definición de contratos para persistencia (IRepository) o servicios externos.
+* **Domain Events:** Notificaciones de cambios significativos en el dominio para consistencia eventual.
+* **Excepciones de Dominio:** Errores específicos de negocio (ej. `InsufficientFundsException`).
 
 ### 4.3 Responsabilidades Prohibidas
 
@@ -91,20 +96,20 @@ La capa Application (`THtracker.Application`) contiene la lógica de aplicación
 
 ### 5.2 Responsabilidades Permitidas
 
-* Casos de uso ({Acción}{Entidad}UseCase)
-* Orquestación de entidades del Domain
-* Coordinación de transacciones
-* Validación de flujo (no invariantes)
-* Definición de interfaces (puertos) hacia Infrastructure
-* Modelos de entrada y salida (DTOs de aplicación)
+* **Use Cases (Interactors):** Clases que implementan una operación específica del sistema orquestando el dominio.
+* **Input/Output Ports:** Definición de los datos que entran y salen del caso de uso (DTOs).
+* **Result Pattern:** Uso de un objeto `Result<T>` para comunicar éxito o fracaso, evitando el flujo basado en excepciones.
+* **DTO Mappings:** Transformación de Entidades de Dominio a DTOs de Aplicación.
+* **Validación de Aplicación:** Validación de la Request inicial para asegurar integridad antes de tocar el Dominio.
+* **Coordinación de Transacciones:** Gestión de la unidad de trabajo (Unit of Work).
 
 ### 5.3 Responsabilidades Prohibidas
 
-* Reglas de negocio invariantes
-* Acceso directo a persistencia
-* Uso de frameworks
-* Implementaciones técnicas
-* Controladores
+* Reglas de negocio invariantes (pertenecen al Domain)
+* Acceso directo a detalles de persistencia
+* Uso de frameworks de infraestructura (EF Core, ASP.NET Core en lógica)
+* Implementaciones técnicas concretas
+* Controladores o manejo de protocolos de red
 
 ### 5.4 Regla Crítica
 
@@ -134,7 +139,7 @@ Es intercambiable sin modificar el núcleo.
 
 ### 6.4 Regla Crítica
 
-Infrastructure ejecuta decisiones. Nunca las toma.
+Infrastructure ejecuta decisiones técnicas. Nunca toma decisiones de negocio.
 
 ## 7. Capa Presentation (INTERFAZ)
 
@@ -152,10 +157,10 @@ Traduce protocolos externos a invocaciones de casos de uso.
 
 ### 7.3 Responsabilidades Prohibidas
 
-* Lógica de negocio
+* Lógica de negocio o validaciones de invariantes
 * Reglas de dominio
-* Acceso a repositorios
-* Orquestación compleja
+* Acceso directo a repositorios o bases de datos
+* Orquestación de lógica de aplicación (debe ir en UseCases)
 
 ### 7.4 Regla Crítica
 
@@ -170,11 +175,11 @@ Presentation coordina protocolos, no procesos.
 * Mapear Request → Input del UseCase y Output → `IActionResult` con códigos adecuados (200, 201, 204, 404, 403, 401).
 * Documentar respuestas con `ProducesResponseType`.
 
-### 7.6 Manejo de Errores en Presentation
-
-* Errores de negocio desde Application deben traducirse a 400 (BadRequest) con payload consistente (`ApiErrorResponse`).
-* Autenticación/Autorización: 401 cuando no autenticado, 403 cuando no autorizado/dueño.
-* Nunca lanzar excepciones desde Presentation por lógica de negocio; capturar y mapear.
+* **Result Mapping:** Mapear el objeto `Result` del Use Case a un `ProblemDetails` o respuesta estándar HTTP.
+* **Global Exception Handling:** Un middleware debe capturar excepciones inesperadas (500), pero la lógica de negocio debe fluir vía `Result`.
+* **ViewModel / Response DTOs:** Objetos optimizados para el consumo del cliente (frontend/móvil).
+* **Validación de Formato:** Uso de Data Annotations o FluentValidation para asegurar que los tipos de datos son correctos.
+* **Thin Controllers:** Los controladores no deben tener más de 5-10 líneas de código por método. Solo extraen datos de la Request, llaman al Use Case y devuelven la Response.
 
 ## 8. DTOs (Definición y Ubicación)
 
@@ -220,22 +225,23 @@ No debe introducirse si no resuelve un problema real.
 ## 11. Flujo Normativo para Agregar Funcionalidad
 
 1. **Domain (`THtracker.Domain`)**
-    * Ajustar entidades y reglas
-    * Proteger invariantes
+    * Ajustar entidades y proteger invariantes.
+    * Crear Value Objects o Domain Services si es necesario.
 2. **Application (`THtracker.Application`)**
-    * Crear UseCase
-    * Orquestar dominio
-    * Definir interfaces necesarias
+    * Definir el contrato de entrada/salida (DTOs).
+    * Implementar el Caso de Uso (UseCase/Interactor).
+    * Definir interfaces de infraestructura necesarias (Puerto).
 3. **Infrastructure (`THtracker.Infrastructure`)**
-    * Implementar interfaces
-    * Resolver detalles técnicos
+    * Implementar las interfaces definidas en la capa Application o Domain (Adaptador).
+    * Configurar mappers de persistencia si es necesario.
 4. **Presentation (`THtracker.API`)**
-    * Exponer endpoint
-    * Validar formato
-    * Invocar UseCase
-5. **Composition Root**
-    * Registrar dependencias
-    * Conectar Infrastructure
+    * Exponer el endpoint (Controller/Minimal API).
+    * Mapear la Request al Input del Use Case.
+    * Invocar el Use Case y transformar el `Result` en una Respuesta HTTP.
+5. **Composition Root (API/Program.cs)**
+    * Registrar las nuevas dependencias en el contenedor de DI.
+6. **Testing (`THtracker.Tests`)**
+    * Validar lógica en todos los niveles para asegurar que los cambios no rompen invariantes existentes.
 
 ## 12. Testing (Clasificación)
 
