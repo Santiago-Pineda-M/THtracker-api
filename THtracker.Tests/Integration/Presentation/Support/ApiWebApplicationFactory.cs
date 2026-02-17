@@ -13,6 +13,7 @@ public class ApiWebApplicationFactory : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.UseEnvironment("Testing");
         builder.ConfigureServices(services =>
         {
             // Replace authentication with Test scheme
@@ -23,12 +24,13 @@ public class ApiWebApplicationFactory : WebApplicationFactory<Program>
                     options => { }
                 );
 
-            // Remove default repositories and register in-memory stubs
+            // Remove default repositories and register in-memory stubs (share role repo so user-role repo resolves roles by same IDs)
+            var inMemoryRoleRepo = new InMemoryRoleRepository();
             ReplaceService<IUserRepository>(services, new InMemoryUserRepository());
             ReplaceService<IActivityRepository>(services, new InMemoryActivityRepository());
             ReplaceService<ICategoryRepository>(services, new InMemoryCategoryRepository());
-            ReplaceService<IRoleRepository>(services, new InMemoryRoleRepository());
-            ReplaceService<IUserRoleRepository>(services, new InMemoryUserRoleRepository());
+            ReplaceService<IRoleRepository>(services, inMemoryRoleRepo);
+            ReplaceService<IUserRoleRepository>(services, new InMemoryUserRoleRepository(inMemoryRoleRepo));
             ReplaceService<IActivityLogRepository>(services, new InMemoryActivityLogRepository());
             ReplaceService<IActivityValueDefinitionRepository>(
                 services,
@@ -196,7 +198,12 @@ public class InMemoryRoleRepository : IRoleRepository
 public class InMemoryUserRoleRepository : IUserRoleRepository
 {
     private readonly Dictionary<Guid, HashSet<Guid>> _userRoles = new();
-    private readonly InMemoryRoleRepository _roleRepo = new();
+    private readonly IRoleRepository _roleRepo;
+
+    public InMemoryUserRoleRepository(IRoleRepository roleRepo)
+    {
+        _roleRepo = roleRepo;
+    }
 
     public Task<IEnumerable<Role>> GetRolesByUserAsync(
         Guid userId,
@@ -205,8 +212,13 @@ public class InMemoryUserRoleRepository : IUserRoleRepository
     {
         if (_userRoles.TryGetValue(userId, out var set))
         {
-            var roles = set.Select(id => _roleRepo.GetByIdAsync(id, cancellationToken).Result!)
-                .ToList();
+            var roles = new List<Role>();
+            foreach (var id in set)
+            {
+                var role = _roleRepo.GetByIdAsync(id, cancellationToken).Result;
+                if (role != null)
+                    roles.Add(role);
+            }
             return Task.FromResult<IEnumerable<Role>>(roles);
         }
         return Task.FromResult(Enumerable.Empty<Role>());

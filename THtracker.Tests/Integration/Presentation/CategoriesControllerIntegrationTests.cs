@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
@@ -9,9 +10,29 @@ namespace THtracker.Tests.Integration.Presentation;
 
 [Trait("Category", "Integration")]
 [Trait("Layer", "Presentation")]
-public class CategoriesControllerIntegrationTests
+public class CategoriesControllerIntegrationTests : IDisposable
 {
     private readonly ApiWebApplicationFactory _factory = new();
+
+    [Fact]
+    public async Task Create_ShouldReturnUnauthorized_WhenNoAuth()
+    {
+        var client = _factory.CreateClient();
+        var body = new StringContent("{\"name\":\"Cat 1\"}", Encoding.UTF8, "application/json");
+        var response = await client.PostAsync("/api/v1/categories", body);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Create_ShouldReturnCreated_WhenValid()
+    {
+        var client = _factory.CreateClient();
+        var userId = Guid.NewGuid();
+        client.DefaultRequestHeaders.Add(TestAuthHandler.HeaderUserId, userId.ToString());
+        var body = new StringContent("{\"name\":\"Cat 1\"}", Encoding.UTF8, "application/json");
+        var response = await client.PostAsync("/api/v1/categories", body);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
 
     [Fact]
     public async Task GetAll_ShouldReturnUnauthorized_WhenNoAuth()
@@ -52,4 +73,6 @@ public class CategoriesControllerIntegrationTests
         var response = await client.GetAsync($"/api/v1/categories/{category.Id}");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
+
+    public void Dispose() => _factory.Dispose();
 }

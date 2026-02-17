@@ -6,7 +6,7 @@ Este documento describe el recorrido del usuario desde el **registro** hasta **c
 
 ## 1. Esquema SQL y modelo de datos (resumen)
 
-El archivo `docs/database/db.sql` define las tablas principales y sus relaciones:
+El archivo [docs/database/db.sql](../database/db.sql) define las tablas principales y sus relaciones:
 
 | Tabla | Propósito | Relación |
 |-------|-----------|----------|
@@ -15,15 +15,15 @@ El archivo `docs/database/db.sql` define las tablas principales y sus relaciones
 | **categories** | Categorías del usuario (name) | FK → users |
 | **activities** | Actividades (name, allow_overlap, category_id) | FK → users, categories |
 | **activity_value_definitions** | Definiciones de valores medibles por actividad (nombre, tipo, unidad, mín/máx) | FK → activities |
-| **activity_logs** | Registros de “cuándo” se hizo la actividad (started_at, ended_at) | FK → activities |
+| **activity_logs** | Registros de "cuándo" se hizo la actividad (started_at, ended_at) | FK → activities |
 | **activity_log_values** | Valores concretos por registro (value_definition_id + value) | FK → activity_logs, activity_value_definitions |
 | **roles** / **user_roles** | Roles y asignación a usuarios | FK → users, roles |
 
 **Flujo de datos:**
 
 - Un **usuario** tiene **categorías** y **actividades** (cada actividad pertenece a una categoría).
-- Cada **actividad** puede tener **definiciones de valor** (ej. “Cantidad”, “Notas”).
-- Cada vez que el usuario “hace” la actividad se crea un **activity_log** (inicio/fin).
+- Cada **actividad** puede tener **definiciones de valor** (ej. "Cantidad", "Notas").
+- Cada vez que el usuario "hace" la actividad se crea un **activity_log** (inicio/fin).
 - En cada **activity_log** se pueden guardar **activity_log_values** (un valor por definición, ej. cantidad = 5, notas = "bien").
 
 En el código C# se usan además tablas de autenticación (por ejemplo `user_logins`, `refresh_tokens`) que extienden este modelo para login con contraseña y JWT.
@@ -86,7 +86,7 @@ A continuación se describe la **ruta del usuario** en el orden lógico de uso, 
 
 ---
 
-### 2.5 Definiciones de valores (opcional, para “detalles” por registro)
+### 2.5 Definiciones de valores (opcional, para "detalles" por registro)
 
 | Paso | Acción | Endpoint | Descripción |
 |------|--------|----------|-------------|
@@ -101,14 +101,14 @@ A continuación se describe la **ruta del usuario** en el orden lógico de uso, 
 
 | Paso | Acción | Endpoint | Descripción |
 |------|--------|----------|-------------|
-| 11 | Iniciar registro (empezar a “hacer” la actividad) | `POST /api/v1/activity-logs/start` | Body: `{ "activityId": "guid" }`. Crea un nuevo `activity_log` con `started_at = now`, `ended_at = null`. Respuesta: `ActivityLogResponse` (id, activityId, startedAt, endedAt) y `Location: /api/v1/activity-logs/{id}`. Se aplican reglas de solapamiento según `allow_overlap`. |
+| 11 | Iniciar registro (empezar a "hacer" la actividad) | `POST /api/v1/activity-logs/start` | Body: `{ "activityId": "guid" }`. Crea un nuevo `activity_log` con `started_at = now`, `ended_at = null`. Respuesta: `ActivityLogResponse` (id, activityId, startedAt, endedAt) y `Location: /api/v1/activity-logs/{id}`. Se aplican reglas de solapamiento según `allow_overlap`. |
 | 12 | Detener registro | `POST /api/v1/activity-logs/{id}/stop` | Fija `ended_at = now` en ese log. Respuesta incluye duración en minutos. Solo si el log es de una actividad del usuario. |
 
 - **SQL:** Inserciones en `activity_logs`; actualización de `ended_at` al parar.
 
 ---
 
-### 2.7 Editar un registro y añadir “detalles” (valores)
+### 2.7 Editar un registro y añadir "detalles" (valores)
 
 | Paso | Acción | Endpoint | Descripción |
 |------|--------|----------|-------------|
@@ -125,14 +125,14 @@ A continuación se describe la **ruta del usuario** en el orden lógico de uso, 
 |------|--------|----------|-------------|
 | 15 | Consultar mis actividades | `GET /api/v1/activities` | Lista todas las actividades del usuario (con categoryId, name, allowOverlap). |
 | 16 | Consultar una actividad | `GET /api/v1/activities/{id}` | Detalle de una actividad (misma estructura). |
-| 17 | Consultar definiciones de la actividad | `GET /api/v1/activities/{activityId}/definitions` | Lista de “qué” se puede medir en esa actividad (nombre, tipo, unidad, etc.). |
+| 17 | Consultar definiciones de la actividad | `GET /api/v1/activities/{activityId}/definitions` | Lista de "qué" se puede medir en esa actividad (nombre, tipo, unidad, etc.). |
 
 | Paso | Acción | Endpoint | Descripción |
 |------|--------|----------|-------------|
 | 18 | Listar registros de una actividad | `GET /api/v1/activity-logs?activityId={guid}` | Lista los logs de esa actividad (solo si es dueño). |
 | 19 | Obtener un registro por ID | `GET /api/v1/activity-logs/{id}` | Un log concreto con fechas y duración (solo si pertenece a una actividad del usuario). |
 
-La ruta “consultar sus actividades con sus detalles” queda cubierta: actividades, definiciones de valor y registros (logs) con sus fechas; los valores concretos por log se gestionan con `POST .../values` y pueden ampliarse en el futuro con un DTO que incluya valores en el GET del log si se desea.
+La ruta "consultar sus actividades con sus detalles" queda cubierta: actividades, definiciones de valor y registros (logs) con sus fechas; los valores concretos por log se gestionan con `POST .../values` y pueden ampliarse en el futuro con un DTO que incluya valores en el GET del log si se desea.
 
 ---
 
@@ -173,4 +173,4 @@ Consultar:
 | Registrar / editar uso | `activity_logs`, `activity_log_values` |
 | Consultar actividades | Lectura de `activities`, `categories`, `activity_value_definitions`; consulta de logs pendiente de implementar en la API |
 
-La API expone GET de activity-logs (lista por `activityId` y por `id`), por lo que la ruta queda cerrada desde el registro hasta “consultar sus actividades con sus detalles” (incluyendo registros).
+La API expone GET de activity-logs (lista por `activityId` y por `id`), por lo que la ruta queda cerrada desde el registro hasta "consultar sus actividades con sus detalles" (incluyendo registros).

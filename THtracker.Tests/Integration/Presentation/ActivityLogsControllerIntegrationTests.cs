@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using FluentAssertions;
 using THtracker.Domain.Entities;
 using THtracker.Tests.Integration.Presentation.Support;
@@ -10,6 +11,29 @@ namespace THtracker.Tests.Integration.Presentation
     public class ActivityLogsControllerIntegrationTests : IDisposable
     {
         private readonly ApiWebApplicationFactory _factory = new();
+
+        [Fact]
+        public async Task GetAll_ShouldReturnUnauthorized_WhenNoAuth()
+        {
+            var client = _factory.CreateClient();
+            var activityId = Guid.NewGuid();
+            var response = await client.GetAsync($"/api/v1/activity-logs?activityId={activityId}");
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+    
+
+        [Fact]
+        public async Task Start_ShouldReturnUnauthorized_WhenNoAuth()
+        {
+            var client = _factory.CreateClient();
+            var activityId = Guid.NewGuid();
+            var body = new StringContent(
+                $"{{\"activityId\":\"{activityId}\"}}",
+                Encoding.UTF8,
+                "application/json");
+            var response = await client.PostAsync("/api/v1/activity-logs/start", body);
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
 
         [Fact]
         public async Task StopShouldReturnUnauthorizedWhenNoAuth()

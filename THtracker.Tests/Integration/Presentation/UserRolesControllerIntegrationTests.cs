@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using FluentAssertions;
+using THtracker.Application.Constants;
 using THtracker.Domain.Entities;
 using THtracker.Tests.Integration.Presentation.Support;
 
@@ -42,13 +43,19 @@ public class UserRolesControllerIntegrationTests : IDisposable
     public async Task GetRoles_ShouldReturnOk_WhenAdmin()
     {
         var client = _factory.CreateClient();
-        var userId = Guid.NewGuid();
         var adminId = Guid.NewGuid();
 
         var userRepo = _factory.Services.GetService(typeof(Domain.Interfaces.IUserRepository))
             as Domain.Interfaces.IUserRepository;
+        var userRoleRepo = _factory.Services.GetService(typeof(Domain.Interfaces.IUserRoleRepository))
+            as Domain.Interfaces.IUserRoleRepository;
+        var roleRepo = _factory.Services.GetService(typeof(Domain.Interfaces.IRoleRepository))
+            as Domain.Interfaces.IRoleRepository;
         var user = new User("Test User", "test@example.com");
         await userRepo!.AddAsync(user);
+
+        var adminRole = (await roleRepo!.GetAllAsync()).First(r => r.Name == DefaultRoles.Admin);
+        await userRoleRepo!.AddRoleToUserAsync(user.Id, adminRole.Id);
 
         client.DefaultRequestHeaders.Add(TestAuthHandler.HeaderUserId, adminId.ToString());
         client.DefaultRequestHeaders.Add(TestAuthHandler.HeaderRoles, "Admin");

@@ -51,8 +51,10 @@ public class ExceptionHandlingMiddleware
 
         if (statusCode == (int)HttpStatusCode.InternalServerError)
         {
-            problemDetails.Detail = "Ocurrió un error inesperado en el servidor.";
-            // En desarrollo podrías querer más info, pero en producción nunca.
+            var env = context.RequestServices.GetService(typeof(Microsoft.AspNetCore.Hosting.IWebHostEnvironment)) as Microsoft.AspNetCore.Hosting.IWebHostEnvironment;
+            problemDetails.Detail = (env?.EnvironmentName == "Development" || env?.EnvironmentName == "Testing")
+                ? exception.Message
+                : "Ocurrió un error inesperado en el servidor.";
         }
 
         await context.Response.WriteAsJsonAsync(problemDetails);

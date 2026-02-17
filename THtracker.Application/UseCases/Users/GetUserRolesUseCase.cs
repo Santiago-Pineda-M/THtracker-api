@@ -19,7 +19,7 @@ public class GetUserRolesUseCase
     )
     {
         var roles = await _userRoleRepository.GetRolesByUserAsync(userId, cancellationToken);
-        var response = roles.Select(r => new RoleResponse(r.Id, r.Name));
-        return Result.Success(response);
+        var response = roles.Select(r => new RoleResponse(r.Id, r.Name)).ToList();
+        return Result.Success<IEnumerable<RoleResponse>>(response);
     }
 }

@@ -106,6 +106,7 @@ builder.Services.AddScoped<DeleteRoleUseCase>();
 builder.Services.AddScoped<GetUserRolesUseCase>();
 builder.Services.AddScoped<AddRoleToUserUseCase>();
 builder.Services.AddScoped<RemoveRoleFromUserUseCase>();
+builder.Services.AddScoped<SetUserRolesUseCase>();
 
 // Application Layer - Use Cases (Categories)
 builder.Services.AddScoped<GetAllCategoriesUseCase>();
