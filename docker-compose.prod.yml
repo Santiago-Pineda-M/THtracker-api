@@ -1,0 +1,16 @@
+version: "3.8"
+services:
+  thtracker_api:
+    image: ghcr.io/${OWNER}/thtracker-api:latest
+    restart: always
+    ports:
+      - "80:80"
+    env_file: .env
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      # Otras variables se cargan desde .env (ConnectionStrings__Default, Jwt__SecretKey, etc.)
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
