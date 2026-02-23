@@ -93,7 +93,8 @@ public class UserRolesController : ControllerBase
         CancellationToken cancellationToken
     )
     {
-        var result = await _setUserRoles.ExecuteAsync(userId, request.RoleNames, cancellationToken);
+        var roleNames = request?.RoleNames ?? new List<string>();
+        var result = await _setUserRoles.ExecuteAsync(userId, roleNames, cancellationToken);
         return result.ToActionResult();
     }
 }
