@@ -182,18 +182,78 @@ app.MapControllers();
 // Seed por defecto (Clean Architecture: Presentation solo invoca UseCase; persistencia vía IDataSeeder en Infrastructure)
 using (var scope = app.Services.CreateScope())
 {
-    // Aplicar migraciones pendientes antes de seed para asegurar que las tablas existen
+    // Aplicar migraciones pendientes antes de seed para asegurar que las tablas existen.
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
+    var migrationsApplied = false;
+    try
+    {
+        db.Database.Migrate();
+        migrationsApplied = true;
+        logger.LogInformation("Database migrations applied successfully.");
+    }
+    catch (InvalidOperationException ex)
+    {
+        // Mensaje esperado cuando el modelo cambió pero no se generó una migración
+        if (ex.Message.Contains("PendingModelChangesWarning", StringComparison.OrdinalIgnoreCase)
+            || ex.Message.Contains("pending changes", StringComparison.OrdinalIgnoreCase))
+        {
+            logger.LogWarning(ex, "Pending model changes detected. Attempting fallback strategy.");
+            // Si es SQLite, intentar EnsureCreated() como fallback para despliegues sencillos
+            try
+            {
+                if (db.Database.IsSqlite())
+                {
+                    var created = db.Database.EnsureCreated();
+                    if (created)
+                    {
+                        migrationsApplied = true;
+                        logger.LogInformation("Database created with EnsureCreated() fallback.");
+                    }
+                    else
+                    {
+                        logger.LogWarning("EnsureCreated() did not create the database; it may already exist but model is out of sync.");
+                    }
+                }
+                else
+                {
+                    logger.LogError("Database provider is not SQLite and there are pending model changes. Add a migration and redeploy.");
+                }
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "EnsureCreated() fallback failed.");
+            }
+        }
+        else
+        {
+            throw;
+        }
+    }
 
-    var seedUseCase = scope.ServiceProvider.GetRequiredService<SeedDefaultDataUseCase>();
-    var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
-    var input = new SeedDefaultDataInput(
-        config["Seed:DefaultAdminEmail"] ?? "",
-        config["Seed:DefaultAdminPassword"] ?? "",
-        config["Seed:DefaultAdminName"] ?? "Administrator"
-    );
-    await seedUseCase.ExecuteAsync(input);
+    // Ejecutar seed sólo si la migración/creación fue exitosa; atrapar errores para no detener la app
+    if (migrationsApplied)
+    {
+        try
+        {
+            var seedUseCase = scope.ServiceProvider.GetRequiredService<SeedDefaultDataUseCase>();
+            var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+            var input = new SeedDefaultDataInput(
+                config["Seed:DefaultAdminEmail"] ?? "",
+                config["Seed:DefaultAdminPassword"] ?? "",
+                config["Seed:DefaultAdminName"] ?? "Administrator"
+            );
+            await seedUseCase.ExecuteAsync(input);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Seeding default data failed. The application will continue running without seed.");
+        }
+    }
+    else
+    {
+        logger.LogWarning("Skipping data seeding because migrations were not applied.");
+    }
 }
 
 app.Run();
