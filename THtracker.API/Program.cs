@@ -182,6 +182,10 @@ app.MapControllers();
 // Seed por defecto (Clean Architecture: Presentation solo invoca UseCase; persistencia vía IDataSeeder en Infrastructure)
 using (var scope = app.Services.CreateScope())
 {
+    // Aplicar migraciones pendientes antes de seed para asegurar que las tablas existen
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+
     var seedUseCase = scope.ServiceProvider.GetRequiredService<SeedDefaultDataUseCase>();
     var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
     var input = new SeedDefaultDataInput(
