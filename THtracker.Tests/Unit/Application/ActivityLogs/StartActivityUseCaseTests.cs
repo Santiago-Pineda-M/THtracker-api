@@ -34,7 +34,7 @@ public class StartActivityUseCaseTests
         // Arrange
         var userId = Guid.NewGuid();
         var activityId = Guid.NewGuid();
-        var activity = new Activity(userId, Guid.NewGuid(), "Exclusive", false);
+        var activity = new Activity(userId, Guid.NewGuid(), "Exclusive", "#FF0000", false);
         var request = new StartActivityLogRequest(activityId);
 
         _activityRepositoryMock.Setup(x => x.GetByIdAsync(activityId, It.IsAny<CancellationToken>()))
@@ -57,7 +57,7 @@ public class StartActivityUseCaseTests
         // Arrange
         var userId = Guid.NewGuid();
         var activityId = Guid.NewGuid();
-        var activity = new Activity(userId, Guid.NewGuid(), "Exclusive", false);
+        var activity = new Activity(userId, Guid.NewGuid(), "Exclusive", "#FF0000", false);
         var request = new StartActivityLogRequest(activityId);
 
         var activeLog = new ActivityLog(Guid.NewGuid(), DateTime.UtcNow);
@@ -82,11 +82,11 @@ public class StartActivityUseCaseTests
         // Arrange
         var userId = Guid.NewGuid();
         var activityId = Guid.NewGuid();
-        var newActivity = new Activity(userId, Guid.NewGuid(), "Overlappable", true);
+        var newActivity = new Activity(userId, Guid.NewGuid(), "Overlappable", "#FF0000", true);
         var request = new StartActivityLogRequest(activityId);
 
         var activeActivityId = Guid.NewGuid();
-        var activeActivity = new Activity(userId, Guid.NewGuid(), "Exclusive Active", false);
+        var activeActivity = new Activity(userId, Guid.NewGuid(), "Exclusive Active", "#FF0000", false);
         var activeLog = new ActivityLog(activeActivityId, DateTime.UtcNow);
 
         _activityRepositoryMock.Setup(x => x.GetByIdAsync(activityId, It.IsAny<CancellationToken>()))
@@ -111,11 +111,11 @@ public class StartActivityUseCaseTests
         // Arrange
         var userId = Guid.NewGuid();
         var activityId = Guid.NewGuid();
-        var newActivity = new Activity(userId, Guid.NewGuid(), "Overlappable New", true);
+        var newActivity = new Activity(userId, Guid.NewGuid(), "Overlappable New", "#FF0000", true);
         var request = new StartActivityLogRequest(activityId);
 
         var activeActivityId = Guid.NewGuid();
-        var activeActivity = new Activity(userId, Guid.NewGuid(), "Overlappable Active", true);
+        var activeActivity = new Activity(userId, Guid.NewGuid(), "Overlappable Active", "#FF0000", true);
         var activeLog = new ActivityLog(activeActivityId, DateTime.UtcNow);
 
         _activityRepositoryMock.Setup(x => x.GetByIdAsync(activityId, It.IsAny<CancellationToken>()))

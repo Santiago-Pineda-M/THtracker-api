@@ -33,7 +33,7 @@ public class GetUserActivityReportUseCaseTests
         var request = new ActivityReportRequest(startDate, endDate);
 
         var activityId = Guid.NewGuid();
-        var activity = new Activity(userId, Guid.NewGuid(), "Work", false);
+        var activity = new Activity(userId, Guid.NewGuid(), "Work", "#FF0000", false);
         _activityRepositoryMock.Setup(x => x.GetByIdAsync(activityId, It.IsAny<CancellationToken>())).ReturnsAsync(activity);
 
         // Log that started before and ended during the interval

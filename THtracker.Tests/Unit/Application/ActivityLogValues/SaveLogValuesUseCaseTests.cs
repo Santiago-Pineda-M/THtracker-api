@@ -43,7 +43,7 @@ public class SaveLogValuesUseCaseTests
         var activityId = Guid.NewGuid();
         var logId = Guid.NewGuid();
         var log = new ActivityLog(activityId, DateTime.UtcNow);
-        var activity = new Activity(userId, Guid.NewGuid(), "Running", true);
+        var activity = new Activity(userId, Guid.NewGuid(), "Running", "#FF0000", true);
         var definition = new ActivityValueDefinition(activityId, "Distance", "Number");
 
         _logRepositoryMock.Setup(x => x.GetByIdAsync(logId, It.IsAny<CancellationToken>())).ReturnsAsync(log);
@@ -70,7 +70,7 @@ public class SaveLogValuesUseCaseTests
         var activityId = Guid.NewGuid();
         var logId = Guid.NewGuid();
         var log = new ActivityLog(activityId, DateTime.UtcNow);
-        var activity = new Activity(userId, Guid.NewGuid(), "Running", true);
+        var activity = new Activity(userId, Guid.NewGuid(), "Running", "#FF0000", true);
         var definition = new ActivityValueDefinition(activityId, "Distance", "Number");
 
         _logRepositoryMock.Setup(x => x.GetByIdAsync(logId, It.IsAny<CancellationToken>())).ReturnsAsync(log);
@@ -95,7 +95,7 @@ public class SaveLogValuesUseCaseTests
         var otherUserId = Guid.NewGuid();
         var logId = Guid.NewGuid();
         var log = new ActivityLog(Guid.NewGuid(), DateTime.UtcNow);
-        var activity = new Activity(otherUserId, Guid.NewGuid(), "Running", true);
+        var activity = new Activity(otherUserId, Guid.NewGuid(), "Running", "#FF0000", true);
 
         _logRepositoryMock.Setup(x => x.GetByIdAsync(logId, It.IsAny<CancellationToken>())).ReturnsAsync(log);
         _activityRepositoryMock.Setup(x => x.GetByIdAsync(log.ActivityId, It.IsAny<CancellationToken>())).ReturnsAsync(activity);

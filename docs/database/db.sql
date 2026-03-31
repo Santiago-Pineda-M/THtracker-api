@@ -15,8 +15,13 @@ CREATE TABLE user_sessions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL,
     session_token TEXT NOT NULL UNIQUE,
+    device_info TEXT NOT NULL,
+    ip_address TEXT NOT NULL,
+    location TEXT,
+    user_agent TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     expires_at TIMESTAMP NOT NULL,
+    revoked_at TIMESTAMP,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     CONSTRAINT fk_user_sessions_user
         FOREIGN KEY (user_id)

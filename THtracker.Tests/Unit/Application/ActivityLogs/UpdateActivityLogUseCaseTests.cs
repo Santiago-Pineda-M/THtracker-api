@@ -42,7 +42,7 @@ public class UpdateActivityLogUseCaseTests
         var activityId = Guid.NewGuid();
         var logId = Guid.NewGuid();
         var log = new ActivityLog(activityId, DateTime.UtcNow.AddHours(-2));
-        var activity = new Activity(userId, Guid.NewGuid(), "Work", false);
+        var activity = new Activity(userId, Guid.NewGuid(), "Work", "#FF0000", false);
         var request = new UpdateActivityLogRequest(DateTime.UtcNow.AddHours(-1), DateTime.UtcNow);
 
         _validatorMock.Setup(x => x.ValidateAsync(request, It.IsAny<CancellationToken>()))
@@ -73,7 +73,7 @@ public class UpdateActivityLogUseCaseTests
         var activityId = Guid.NewGuid();
         var logId = Guid.NewGuid();
         var log = new ActivityLog(activityId, DateTime.UtcNow.AddHours(-5));
-        var activity = new Activity(userId, Guid.NewGuid(), "Exclusive", false);
+        var activity = new Activity(userId, Guid.NewGuid(), "Exclusive", "#FF0000", false);
         var request = new UpdateActivityLogRequest(DateTime.UtcNow.AddHours(-1), DateTime.UtcNow);
 
         var otherLog = new ActivityLog(Guid.NewGuid(), DateTime.UtcNow.AddMinutes(-30));

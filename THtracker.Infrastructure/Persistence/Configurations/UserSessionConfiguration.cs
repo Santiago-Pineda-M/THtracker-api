@@ -12,8 +12,13 @@ public class UserSessionConfiguration : IEntityTypeConfiguration<UserSession>
         builder.HasKey(x => x.Id);
         builder.Property(x => x.UserId).IsRequired();
         builder.Property(x => x.SessionToken).IsRequired();
+        builder.Property(x => x.DeviceInfo).IsRequired();
+        builder.Property(x => x.IpAddress).IsRequired();
+        builder.Property(x => x.Location);
+        builder.Property(x => x.UserAgent);
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.ExpiresAt).IsRequired();
+        builder.Property(x => x.RevokedAt);
         builder.Property(x => x.IsActive).IsRequired();
     }
 }

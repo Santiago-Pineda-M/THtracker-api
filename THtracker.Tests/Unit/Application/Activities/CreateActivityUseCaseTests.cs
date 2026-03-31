@@ -40,8 +40,8 @@ public class CreateActivityUseCaseTests
         // Arrange
         var userId = Guid.NewGuid();
         var categoryId = Guid.NewGuid();
-        var category = new Category(userId, "Category 1");
-        var request = new CreateActivityRequest(categoryId, "New Activity", true);
+        var category = new Category(userId, "Category 1", "#FF0000");
+        var request = new CreateActivityRequest(categoryId, "New Activity", "#FF0000", true);
 
         _validatorMock.Setup(x => x.ValidateAsync(request, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ValidationResult());
@@ -66,7 +66,7 @@ public class CreateActivityUseCaseTests
         // Arrange
         var userId = Guid.NewGuid();
         var categoryId = Guid.NewGuid();
-        var request = new CreateActivityRequest(categoryId, "New Activity", true);
+        var request = new CreateActivityRequest(categoryId, "New Activity", "#FF0000", true);
 
         _validatorMock.Setup(x => x.ValidateAsync(request, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ValidationResult());
@@ -89,8 +89,8 @@ public class CreateActivityUseCaseTests
         var userId = Guid.NewGuid();
         var otherUserId = Guid.NewGuid();
         var categoryId = Guid.NewGuid();
-        var category = new Category(otherUserId, "Category 1");
-        var request = new CreateActivityRequest(categoryId, "New Activity", true);
+        var category = new Category(otherUserId, "Category 1", "#FF0000");
+        var request = new CreateActivityRequest(categoryId, "New Activity", "#FF0000", true);
 
         _validatorMock.Setup(x => x.ValidateAsync(request, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ValidationResult());
@@ -110,7 +110,7 @@ public class CreateActivityUseCaseTests
     public async Task ExecuteAsync_ShouldReturnFailure_WhenValidationFails()
     {
         // Arrange
-        var request = new CreateActivityRequest(Guid.Empty, "", true);
+        var request = new CreateActivityRequest(Guid.Empty, "", "#FF0000", true);
         var validationFailures = new List<ValidationFailure> { new("Name", "Name is required") };
         
         _validatorMock.Setup(x => x.ValidateAsync(request, It.IsAny<CancellationToken>()))

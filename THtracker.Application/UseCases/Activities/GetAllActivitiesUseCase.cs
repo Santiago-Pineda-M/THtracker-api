@@ -20,6 +20,7 @@ public class GetAllActivitiesUseCase
             a.UserId, 
             a.CategoryId, 
             a.Name, 
+            a.Color,
             a.AllowOverlap
         ));
     }

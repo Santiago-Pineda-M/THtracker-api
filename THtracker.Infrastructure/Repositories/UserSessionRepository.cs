@@ -24,6 +24,27 @@ public class UserSessionRepository : IUserSessionRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IEnumerable<UserSession>> GetActiveByUserAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _context
+            .UserSessions.Where(s => s.UserId == userId && s.IsActive)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<UserSession?> GetByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _context.UserSessions.FirstOrDefaultAsync(
+            s => s.Id == id,
+            cancellationToken
+        );
+    }
+
     public async Task<UserSession?> GetByTokenAsync(
         string sessionToken,
         CancellationToken cancellationToken = default

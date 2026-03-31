@@ -8,8 +8,16 @@ public interface IUserSessionRepository
         Guid userId,
         CancellationToken cancellationToken = default
     );
+    Task<IEnumerable<UserSession>> GetActiveByUserAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default
+    );
     Task<UserSession?> GetByTokenAsync(
         string sessionToken,
+        CancellationToken cancellationToken = default
+    );
+    Task<UserSession?> GetByIdAsync(
+        Guid id,
         CancellationToken cancellationToken = default
     );
     Task AddAsync(UserSession session, CancellationToken cancellationToken = default);

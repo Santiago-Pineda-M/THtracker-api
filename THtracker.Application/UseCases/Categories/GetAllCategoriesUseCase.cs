@@ -15,6 +15,6 @@ public class GetAllCategoriesUseCase
     public async Task<IEnumerable<CategoryResponse>> ExecuteAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var categories = await _categoryRepository.GetAllByUserAsync(userId, cancellationToken);
-        return categories.Select(c => new CategoryResponse(c.Id, c.UserId, c.Name));
+        return categories.Select(c => new CategoryResponse(c.Id, c.UserId, c.Color, c.Name));
     }
 }

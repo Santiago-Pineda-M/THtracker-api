@@ -22,6 +22,6 @@ public class GetCategoryByIdUseCase
         if (category.UserId != userId)
             return Result.Failure<CategoryResponse>(new Error("Forbidden", "No tienes acceso a esta categoría."));
 
-        return new CategoryResponse(category.Id, category.UserId, category.Name);
+        return new CategoryResponse(category.Id, category.UserId, category.Color, category.Name);
     }
 }

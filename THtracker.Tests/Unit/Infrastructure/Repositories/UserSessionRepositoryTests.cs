@@ -30,9 +30,9 @@ public class UserSessionRepositoryTests : IDisposable
         var userId = Guid.NewGuid();
         var otherUserId = Guid.NewGuid();
 
-        var session1 = new UserSession(userId, "token-1", DateTime.UtcNow.AddHours(1));
-        var session2 = new UserSession(userId, "token-2", DateTime.UtcNow.AddHours(2));
-        var sessionOther = new UserSession(otherUserId, "token-3", DateTime.UtcNow.AddHours(1));
+        var session1 = new UserSession(userId, "token-1", DateTime.UtcNow.AddHours(1), "Chrome on Windows", "192.168.1.1");
+        var session2 = new UserSession(userId, "token-2", DateTime.UtcNow.AddHours(2), "Firefox on Linux", "192.168.1.2");
+        var sessionOther = new UserSession(otherUserId, "token-3", DateTime.UtcNow.AddHours(1), "Safari on Mac", "192.168.1.3");
 
         _context.UserSessions.AddRange(session1, session2, sessionOther);
         await _context.SaveChangesAsync();
@@ -65,7 +65,7 @@ public class UserSessionRepositoryTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var session = new UserSession(userId, "unique-token-123", DateTime.UtcNow.AddDays(1));
+        var session = new UserSession(userId, "unique-token-123", DateTime.UtcNow.AddDays(1), "Chrome on Windows", "192.168.1.1");
         _context.UserSessions.Add(session);
         await _context.SaveChangesAsync();
 
@@ -94,7 +94,7 @@ public class UserSessionRepositoryTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var session = new UserSession(userId, "new-session-token", DateTime.UtcNow.AddHours(24));
+        var session = new UserSession(userId, "new-session-token", DateTime.UtcNow.AddHours(24), "Chrome on Windows", "192.168.1.1");
 
         // Act
         await _repository.AddAsync(session);
@@ -113,7 +113,7 @@ public class UserSessionRepositoryTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var session = new UserSession(userId, "session-to-update", DateTime.UtcNow.AddHours(1));
+        var session = new UserSession(userId, "session-to-update", DateTime.UtcNow.AddHours(1), "Chrome on Windows", "192.168.1.1");
         _context.UserSessions.Add(session);
         await _context.SaveChangesAsync();
 
@@ -133,7 +133,7 @@ public class UserSessionRepositoryTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var session = new UserSession(userId, "session-to-delete", DateTime.UtcNow.AddHours(1));
+        var session = new UserSession(userId, "session-to-delete", DateTime.UtcNow.AddHours(1), "Chrome on Windows", "192.168.1.1");
         _context.UserSessions.Add(session);
         await _context.SaveChangesAsync();
 

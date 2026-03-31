@@ -27,6 +27,7 @@ public class GetActivityByIdUseCase
             activity.UserId, 
             activity.CategoryId, 
             activity.Name, 
+            activity.Color,
             activity.AllowOverlap
         );
     }

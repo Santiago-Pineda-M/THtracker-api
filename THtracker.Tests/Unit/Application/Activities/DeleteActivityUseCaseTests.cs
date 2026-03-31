@@ -28,7 +28,7 @@ public class DeleteActivityUseCaseTests
         // Arrange
         var userId = Guid.NewGuid();
         var activityId = Guid.NewGuid();
-        var activity = new Activity(userId, Guid.NewGuid(), "To Delete", false);
+        var activity = new Activity(userId, Guid.NewGuid(), "To Delete", "#FF0000", false);
 
         _repositoryMock.Setup(x => x.GetByIdAsync(activityId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(activity);
@@ -65,7 +65,7 @@ public class DeleteActivityUseCaseTests
         var userId = Guid.NewGuid();
         var otherUserId = Guid.NewGuid();
         var activityId = Guid.NewGuid();
-        var activity = new Activity(otherUserId, Guid.NewGuid(), "Not Yours", false);
+        var activity = new Activity(otherUserId, Guid.NewGuid(), "Not Yours", "#FF0000", false);
 
         _repositoryMock.Setup(x => x.GetByIdAsync(activityId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(activity);

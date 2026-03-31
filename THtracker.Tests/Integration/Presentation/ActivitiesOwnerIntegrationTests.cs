@@ -43,7 +43,7 @@ public class ActivitiesOwnerIntegrationTests : IDisposable
         var client = _factory.CreateClient();
         var userId = Guid.NewGuid();
         var categoryRepo = _factory.Services.GetService(typeof(Domain.Interfaces.ICategoryRepository)) as Domain.Interfaces.ICategoryRepository;
-        var category = new Category(userId, "Cat 1");
+        var category = new Category(userId, "Cat 1", "#FF0000");
         await categoryRepo!.AddAsync(category);
 
         client.DefaultRequestHeaders.Add(TestAuthHandler.HeaderUserId, userId.ToString());
@@ -74,7 +74,7 @@ public class ActivitiesOwnerIntegrationTests : IDisposable
 
         var service = _factory.Services.GetService(typeof(THtracker.Domain.Interfaces.IActivityRepository));
         var repo = (THtracker.Domain.Interfaces.IActivityRepository)service!;
-        var activity = new Activity(ownerId, categoryId, "Act 1", false);
+        var activity = new Activity(ownerId, categoryId, "Act 1", "#FF0000", false);
         await repo.AddAsync(activity);
 
         client.DefaultRequestHeaders.Add(TestAuthHandler.HeaderUserId, otherUserId.ToString());
@@ -92,7 +92,7 @@ public class ActivitiesOwnerIntegrationTests : IDisposable
 
         var service = _factory.Services.GetService(typeof(THtracker.Domain.Interfaces.IActivityRepository));
         var repo = (THtracker.Domain.Interfaces.IActivityRepository)service!;
-        var activity = new Activity(ownerId, categoryId, "Act 1", false);
+        var activity = new Activity(ownerId, categoryId, "Act 1", "#FF0000", false);
         await repo.AddAsync(activity);
 
         client.DefaultRequestHeaders.Add(TestAuthHandler.HeaderUserId, ownerId.ToString());

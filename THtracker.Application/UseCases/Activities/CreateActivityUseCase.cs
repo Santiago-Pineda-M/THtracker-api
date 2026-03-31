@@ -42,7 +42,7 @@ public class CreateActivityUseCase
         if (category.UserId != userId)
             return Result.Failure<ActivityResponse>(new Error("Forbidden", "No tienes acceso a esta categoría."));
 
-        var activity = new Activity(userId, request.CategoryId, request.Name, request.AllowOverlap);
+        var activity = new Activity(userId, request.CategoryId, request.Name, request.Color, request.AllowOverlap);
         
         await _activityRepository.AddAsync(activity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -52,6 +52,7 @@ public class CreateActivityUseCase
             activity.UserId, 
             activity.CategoryId, 
             activity.Name, 
+            activity.Color,
             activity.AllowOverlap
         );
     }

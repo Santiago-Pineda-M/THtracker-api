@@ -40,7 +40,7 @@ public class CreateValueDefinitionUseCaseTests
         // Arrange
         var userId = Guid.NewGuid();
         var activityId = Guid.NewGuid();
-        var activity = new Activity(userId, Guid.NewGuid(), "Running", true);
+        var activity = new Activity(userId, Guid.NewGuid(), "Running", "#FF0000", true);
         var request = new CreateValueDefinitionRequest("Distance", "Number", true, "km");
 
         _validatorMock.Setup(x => x.ValidateAsync(request, It.IsAny<CancellationToken>()))
@@ -88,7 +88,7 @@ public class CreateValueDefinitionUseCaseTests
         var userId = Guid.NewGuid();
         var otherUserId = Guid.NewGuid();
         var activityId = Guid.NewGuid();
-        var activity = new Activity(otherUserId, Guid.NewGuid(), "Secret Activity", true);
+        var activity = new Activity(otherUserId, Guid.NewGuid(), "Secret Activity", "#FF0000", true);
         var request = new CreateValueDefinitionRequest("Extra Data", "Text");
 
         _validatorMock.Setup(x => x.ValidateAsync(request, It.IsAny<CancellationToken>()))

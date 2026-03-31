@@ -37,11 +37,11 @@ public class UpdateCategoryUseCase
         if (category.UserId != userId)
             return Result.Failure<CategoryResponse>(new Error("Forbidden", "No tienes acceso a esta categoría."));
 
-        category.UpdateName(request.Name);
+        category.UpdateName(request.Name, request.Color);
         
         await _categoryRepository.UpdateAsync(category, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new CategoryResponse(category.Id, category.UserId, category.Name);
+        return new CategoryResponse(category.Id, category.UserId, category.Color, category.Name);
     }
 }

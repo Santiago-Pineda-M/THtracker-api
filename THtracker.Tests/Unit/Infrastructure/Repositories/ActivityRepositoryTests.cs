@@ -31,9 +31,9 @@ public class ActivityRepositoryTests : IDisposable
         var otherUserId = Guid.NewGuid();
         var categoryId = Guid.NewGuid();
 
-        var activity1 = new Activity(userId, categoryId, "Activity 1");
-        var activity2 = new Activity(userId, categoryId, "Activity 2");
-        var activityOther = new Activity(otherUserId, categoryId, "Other Activity");
+        var activity1 = new Activity(userId, categoryId, "Activity 1", "#FF0000");
+        var activity2 = new Activity(userId, categoryId, "Activity 2", "#00FF00");
+        var activityOther = new Activity(otherUserId, categoryId, "Other Activity", "#0000FF");
 
         _context.Activities.AddRange(activity1, activity2, activityOther);
         await _context.SaveChangesAsync();
@@ -52,7 +52,7 @@ public class ActivityRepositoryTests : IDisposable
     public async Task GetByIdAsync_ShouldReturnActivity_WhenExists()
     {
         // Arrange
-        var activity = new Activity(Guid.NewGuid(), Guid.NewGuid(), "Activity");
+        var activity = new Activity(Guid.NewGuid(), Guid.NewGuid(), "Activity", "#FF0000");
         _context.Activities.Add(activity);
         await _context.SaveChangesAsync();
 
@@ -79,7 +79,7 @@ public class ActivityRepositoryTests : IDisposable
     public async Task AddAsync_ShouldAddActivity()
     {
         // Arrange
-        var activity = new Activity(Guid.NewGuid(), Guid.NewGuid(), "New Activity");
+        var activity = new Activity(Guid.NewGuid(), Guid.NewGuid(), "New Activity", "#FF0000");
 
         // Act
         await _repository.AddAsync(activity);
@@ -95,12 +95,12 @@ public class ActivityRepositoryTests : IDisposable
     public async Task UpdateAsync_ShouldUpdateActivity()
     {
         // Arrange
-        var activity = new Activity(Guid.NewGuid(), Guid.NewGuid(), "Original Name");
+        var activity = new Activity(Guid.NewGuid(), Guid.NewGuid(), "Original Name", "#FF0000");
         _context.Activities.Add(activity);
         await _context.SaveChangesAsync();
 
         // Act
-        activity.Update("Updated Name", true);
+        activity.Update("Updated Name", "#00FF00", true);
         await _repository.UpdateAsync(activity);
         await _context.SaveChangesAsync();
 
@@ -114,7 +114,7 @@ public class ActivityRepositoryTests : IDisposable
     public async Task DeleteAsync_ShouldDeleteActivity_WhenExists()
     {
         // Arrange
-        var activity = new Activity(Guid.NewGuid(), Guid.NewGuid(), "To Delete");
+        var activity = new Activity(Guid.NewGuid(), Guid.NewGuid(), "To Delete", "#FF0000");
         _context.Activities.Add(activity);
         await _context.SaveChangesAsync();
 

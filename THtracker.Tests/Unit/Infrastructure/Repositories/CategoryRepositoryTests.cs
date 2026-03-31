@@ -30,9 +30,9 @@ public class CategoryRepositoryTests : IDisposable
         var userId = Guid.NewGuid();
         var otherUserId = Guid.NewGuid();
 
-        var category1 = new Category(userId, "Category 1");
-        var category2 = new Category(userId, "Category 2");
-        var categoryOther = new Category(otherUserId, "Other Category");
+        var category1 = new Category(userId, "Category 1", "#FF0000");
+        var category2 = new Category(userId, "Category 2", "#00FF00");
+        var categoryOther = new Category(otherUserId, "Other Category", "#0000FF");
 
         _context.Categories.AddRange(category1, category2, categoryOther);
         await _context.SaveChangesAsync();
@@ -51,7 +51,7 @@ public class CategoryRepositoryTests : IDisposable
     public async Task GetByIdAsync_ShouldReturnCategory_WhenExists()
     {
         // Arrange
-        var category = new Category(Guid.NewGuid(), "Test Category");
+        var category = new Category(Guid.NewGuid(), "Test Category", "#FF0000");
         _context.Categories.Add(category);
         await _context.SaveChangesAsync();
 
@@ -78,7 +78,7 @@ public class CategoryRepositoryTests : IDisposable
     public async Task AddAsync_ShouldAddCategory()
     {
         // Arrange
-        var category = new Category(Guid.NewGuid(), "New Category");
+        var category = new Category(Guid.NewGuid(), "New Category", "#FF0000");
 
         // Act
         await _repository.AddAsync(category);
@@ -94,12 +94,12 @@ public class CategoryRepositoryTests : IDisposable
     public async Task UpdateAsync_ShouldUpdateCategory()
     {
         // Arrange
-        var category = new Category(Guid.NewGuid(), "Original Name");
+        var category = new Category(Guid.NewGuid(), "Original Name", "#FF0000");
         _context.Categories.Add(category);
         await _context.SaveChangesAsync();
 
         // Act
-        category.UpdateName("Updated Name");
+        category.UpdateName("Updated Name", "#00FF00");
         await _repository.UpdateAsync(category);
         await _context.SaveChangesAsync();
 
@@ -112,7 +112,7 @@ public class CategoryRepositoryTests : IDisposable
     public async Task DeleteAsync_ShouldDeleteCategory_WhenExists()
     {
         // Arrange
-        var category = new Category(Guid.NewGuid(), "To Delete");
+        var category = new Category(Guid.NewGuid(), "To Delete", "#FF0000");
         _context.Categories.Add(category);
         await _context.SaveChangesAsync();
 

@@ -63,7 +63,7 @@ namespace THtracker.Tests.Integration.Presentation
                 _factory.Services.GetService(typeof(Domain.Interfaces.IActivityLogRepository))
                 as Domain.Interfaces.IActivityLogRepository;
 
-            Activity activity = new Activity(ownerId, categoryId, "Act 1", false);
+            Activity activity = new Activity(ownerId, categoryId, "Act 1", "#FF0000", false);
             await activityRepo!.AddAsync(activity);
             ActivityLog log = new ActivityLog(activity.Id, DateTime.UtcNow);
             await logRepo!.AddAsync(log);
@@ -90,7 +90,7 @@ namespace THtracker.Tests.Integration.Presentation
                 _factory.Services.GetService(typeof(Domain.Interfaces.IActivityLogRepository))
                 as Domain.Interfaces.IActivityLogRepository;
 
-            Activity activity = new Activity(ownerId, categoryId, "Act 1", false);
+            Activity activity = new Activity(ownerId, categoryId, "Act 1", "#FF0000", false);
             await activityRepo!.AddAsync(activity);
             ActivityLog log = new ActivityLog(activity.Id, DateTime.UtcNow.AddMinutes(-5));
             await logRepo!.AddAsync(log);

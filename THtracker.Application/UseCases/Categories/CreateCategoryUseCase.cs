@@ -31,11 +31,11 @@ public class CreateCategoryUseCase
             return Result.Failure<CategoryResponse>(new Error("Validation", errors));
         }
 
-        var category = new Category(userId, request.Name);
+        var category = new Category(userId, request.Name, request.Color);
         
         await _categoryRepository.AddAsync(category, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new CategoryResponse(category.Id, category.UserId, category.Name);
+        return new CategoryResponse(category.Id, category.UserId, category.Color, category.Name);
     }
 }

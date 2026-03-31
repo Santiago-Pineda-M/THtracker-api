@@ -37,7 +37,7 @@ public class UpdateActivityUseCase
         if (activity.UserId != userId)
             return Result.Failure<ActivityResponse>(new Error("Forbidden", "No tienes acceso a esta actividad."));
 
-        activity.Update(request.Name, request.AllowOverlap);
+        activity.Update(request.Name, request.Color, request.AllowOverlap);
         
         await _activityRepository.UpdateAsync(activity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -47,6 +47,7 @@ public class UpdateActivityUseCase
             activity.UserId, 
             activity.CategoryId, 
             activity.Name, 
+            activity.Color,
             activity.AllowOverlap
         );
     }

@@ -5,5 +5,6 @@ public record ActivityResponse(
     Guid UserId, 
     Guid CategoryId, 
     string Name, 
+    string Color,
     bool AllowOverlap
 );

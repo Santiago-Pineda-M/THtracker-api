@@ -37,7 +37,7 @@ namespace THtracker.Tests.Integration.Presentation
                         typeof(Domain.Interfaces.IActivityRepository)
                     )!;
 
-            Activity activity = new(ownerId, Guid.NewGuid(), "Act X", false);
+            Activity activity = new(ownerId, Guid.NewGuid(), "Act X", "#FF0000", false);
             typeof(Activity).GetProperty("Id")!.SetValue(activity, activityId);
             await activityRepo.AddAsync(activity);
 

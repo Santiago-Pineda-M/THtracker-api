@@ -27,8 +27,8 @@ public class GetAllActivitiesUseCaseTests
         var userId = Guid.NewGuid();
         var activities = new List<Activity>
         {
-            new Activity(userId, Guid.NewGuid(), "Act 1", false),
-            new Activity(userId, Guid.NewGuid(), "Act 2", true)
+            new Activity(userId, Guid.NewGuid(), "Act 1", "#FF0000", false),
+            new Activity(userId, Guid.NewGuid(), "Act 2", "#00FF00", true)
         };
 
         _repositoryMock.Setup(x => x.GetAllByUserAsync(userId, It.IsAny<CancellationToken>()))
