@@ -21,7 +21,7 @@ public static class ResultExtensions
     {
         if (result.IsSuccess)
         {
-            return new OkObjectResult(result.Value);
+            return new OkObjectResult(result.Value!);
         }
 
         return MapErrorToActionResult(result.Error);

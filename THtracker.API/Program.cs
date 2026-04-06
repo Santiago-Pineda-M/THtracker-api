@@ -148,6 +148,8 @@ builder.Services.AddScoped<UpdateActivityLogUseCase>();
 builder.Services.AddScoped<CreateValueDefinitionUseCase>();
 builder.Services.AddScoped<GetValueDefinitionsUseCase>();
 builder.Services.AddScoped<GetValueDefinitionByIdUseCase>();
+builder.Services.AddScoped<UpdateValueDefinitionUseCase>();
+builder.Services.AddScoped<DeleteValueDefinitionUseCase>();
 
 // Application Layer - Use Cases (Log Values)
 builder.Services.AddScoped<SaveLogValuesUseCase>();

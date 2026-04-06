@@ -108,7 +108,7 @@ public class ActivityLogsController : AuthorizedControllerBase
     [HttpPost("{id:guid}/stop")]
     [ProducesResponseType(typeof(ActivityLogResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Stop(Guid id, CancellationToken cancellationToken)
     {
         var userId = GetUserId();
@@ -125,8 +125,8 @@ public class ActivityLogsController : AuthorizedControllerBase
     [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(ActivityLogResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Update(
         Guid id,
         [FromBody] UpdateActivityLogRequest request,
@@ -147,7 +147,7 @@ public class ActivityLogsController : AuthorizedControllerBase
     [HttpPost("{id:guid}/values")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddValues(
         Guid id,
         [FromBody] IEnumerable<LogValueRequest> values,
@@ -166,7 +166,7 @@ public class ActivityLogsController : AuthorizedControllerBase
     /// <param name="cancellationToken">Token de cancelación.</param>
     [HttpGet("{id:guid}/values")]
     [ProducesResponseType(typeof(IEnumerable<LogValueResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetValues(Guid id, CancellationToken cancellationToken)
     {
         var userId = GetUserId();
