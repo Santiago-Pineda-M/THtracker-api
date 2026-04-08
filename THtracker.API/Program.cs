@@ -138,8 +138,9 @@ builder.Services.AddScoped<UpdateActivityUseCase>();
 builder.Services.AddScoped<DeleteActivityUseCase>();
 
 // Application Layer - Use Cases (Activity Logs)
-builder.Services.AddScoped<GetActivityLogsByActivityUseCase>();
-builder.Services.AddScoped<GetActivityLogByIdUseCase>();
+    builder.Services.AddScoped<GetActivityLogsByActivityUseCase>();
+    builder.Services.AddScoped<GetActiveActivityLogsUseCase>();
+    builder.Services.AddScoped<GetActivityLogByIdUseCase>();
 builder.Services.AddScoped<StartActivityUseCase>();
 builder.Services.AddScoped<StopActivityUseCase>();
 builder.Services.AddScoped<UpdateActivityLogUseCase>();

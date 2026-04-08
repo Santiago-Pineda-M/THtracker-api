@@ -17,6 +17,7 @@ namespace THtracker.API.Controllers.v1;
 public class ActivityLogsController : AuthorizedControllerBase
 {
     private readonly GetActivityLogsByActivityUseCase _getLogsByActivity;
+    private readonly GetActiveActivityLogsUseCase _getActiveLogs;
     private readonly GetActivityLogByIdUseCase _getLogById;
     private readonly StartActivityUseCase _startActivity;
     private readonly StopActivityUseCase _stopActivity;
@@ -26,6 +27,7 @@ public class ActivityLogsController : AuthorizedControllerBase
 
     public ActivityLogsController(
         GetActivityLogsByActivityUseCase getLogsByActivity,
+        GetActiveActivityLogsUseCase getActiveLogs,
         GetActivityLogByIdUseCase getLogById,
         StartActivityUseCase startActivity,
         StopActivityUseCase stopActivity,
@@ -35,6 +37,7 @@ public class ActivityLogsController : AuthorizedControllerBase
     )
     {
         _getLogsByActivity = getLogsByActivity;
+        _getActiveLogs = getActiveLogs;
         _getLogById = getLogById;
         _startActivity = startActivity;
         _stopActivity = stopActivity;
@@ -57,6 +60,19 @@ public class ActivityLogsController : AuthorizedControllerBase
     {
         var userId = GetUserId();
         var result = await _getLogsByActivity.ExecuteAsync(userId, activityId, cancellationToken);
+        return result.ToActionResult();
+    }
+
+    /// <summary>
+    /// Lista los registros de actividad que están en curso (sin fecha de fin).
+    /// </summary>
+    /// <param name="cancellationToken">Token de cancelación.</param>
+    [HttpGet("active")]
+    [ProducesResponseType(typeof(IEnumerable<ActivityLogResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetActive(CancellationToken cancellationToken)
+    {
+        var userId = GetUserId();
+        var result = await _getActiveLogs.ExecuteAsync(userId, cancellationToken);
         return result.ToActionResult();
     }
 
