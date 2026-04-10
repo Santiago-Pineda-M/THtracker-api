@@ -5,12 +5,12 @@ using THtracker.Domain.Interfaces;
 
 namespace THtracker.Application.UseCases.ActivityLogs;
 
-public class GetActivityLogsByActivityUseCase
+public class GetActivityLogsUseCase
 {
     private readonly IActivityLogRepository _logRepository;
     private readonly IActivityRepository _activityRepository;
 
-    public GetActivityLogsByActivityUseCase(
+    public GetActivityLogsUseCase(
         IActivityLogRepository logRepository,
         IActivityRepository activityRepository)
     {
@@ -20,17 +20,26 @@ public class GetActivityLogsByActivityUseCase
 
     public async Task<Result<IEnumerable<ActivityLogResponse>>> ExecuteAsync(
         Guid userId,
-        Guid activityId,
+        GetActivityLogsRequest request,
         CancellationToken cancellationToken = default)
     {
-        var activity = await _activityRepository.GetByIdAsync(activityId, cancellationToken);
-        if (activity == null)
-            return Result.Failure<IEnumerable<ActivityLogResponse>>(new Error("NotFound", "La actividad no existe."));
+        // Si se provee ActivityId, validamos que exista y pertenezca al usuario
+        if (request.ActivityId.HasValue)
+        {
+            var activity = await _activityRepository.GetByIdAsync(request.ActivityId.Value, cancellationToken);
+            if (activity == null)
+                return Result.Failure<IEnumerable<ActivityLogResponse>>(new Error("NotFound", "La actividad no existe."));
 
-        if (activity.UserId != userId)
-            return Result.Failure<IEnumerable<ActivityLogResponse>>(new Error("Forbidden", "No tienes acceso a esta actividad."));
+            if (activity.UserId != userId)
+                return Result.Failure<IEnumerable<ActivityLogResponse>>(new Error("Forbidden", "No tienes acceso a esta actividad."));
+        }
 
-        var logs = await _logRepository.GetAllByActivityAsync(activityId, cancellationToken);
+        var logs = await _logRepository.GetLogsAsync(
+            userId, 
+            request.ActivityId, 
+            request.StartDate, 
+            request.EndDate, 
+            cancellationToken);
 
         var response = logs.Select(log =>
         {

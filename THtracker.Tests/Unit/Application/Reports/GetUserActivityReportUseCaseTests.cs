@@ -49,7 +49,7 @@ public class GetUserActivityReportUseCaseTests
         log3.Stop(endDate.AddHours(1)); // 1 hour inside, 1 hour outside
 
         var logs = new List<ActivityLog> { log1, log2, log3 };
-        _logRepositoryMock.Setup(x => x.GetLogsInPeriodWithDetailsAsync(userId, startDate, endDate, It.IsAny<CancellationToken>()))
+        _logRepositoryMock.Setup(x => x.GetLogsAsync(userId, null, startDate, endDate, It.IsAny<CancellationToken>()))
             .ReturnsAsync(logs);
 
         // Act

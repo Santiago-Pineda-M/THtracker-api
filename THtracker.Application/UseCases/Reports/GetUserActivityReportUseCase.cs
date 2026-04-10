@@ -27,7 +27,7 @@ public class GetUserActivityReportUseCase
             return Result.Failure<ActivityReportResponse>(new Error("Validation", "La fecha de inicio no puede ser posterior a la de fin."));
         }
 
-        var logs = await _logRepository.GetLogsInPeriodWithDetailsAsync(userId, request.StartDate, request.EndDate, cancellationToken);
+        var logs = await _logRepository.GetLogsAsync(userId, null, request.StartDate, request.EndDate, cancellationToken);
         
         // Necesitamos los nombres de las actividades. Como el repositorio de logs devuelve ActivityLog, 
         // y ese log está asociado a una actividad, pero no incluimos el objeto Activity en el Select del repo (solo el log).

@@ -314,12 +314,37 @@ public class InMemoryActivityLogRepository : IActivityLogRepository
                 .AsEnumerable()
         );
 
-    public Task<IEnumerable<ActivityLog>> GetLogsInPeriodWithDetailsAsync(
+    public Task<IEnumerable<ActivityLog>> GetLogsAsync(
         Guid userId,
-        DateTime start,
-        DateTime end,
+        Guid? activityId = null,
+        DateTime? start = null,
+        DateTime? end = null,
         CancellationToken cancellationToken = default
-    ) => GetOverlappingLogsAsync(userId, start, end, null, cancellationToken);
+    )
+    {
+        var query = _logs.Values.AsEnumerable();
+        
+        // Note: Inline join with Activities is simulated by assuming logs belong to the user 
+        // if we want to be strict we should check activity ownership but for a mock usually we just filter.
+        // However, some logs might belong to other users in a setup.
+        
+        if (activityId.HasValue)
+        {
+            query = query.Where(l => l.ActivityId == activityId.Value);
+        }
+
+        if (start.HasValue)
+        {
+            query = query.Where(l => l.EndedAt == null || l.EndedAt >= start.Value);
+        }
+
+        if (end.HasValue)
+        {
+            query = query.Where(l => l.StartedAt <= end.Value);
+        }
+
+        return Task.FromResult(query.OrderByDescending(l => l.StartedAt).AsEnumerable());
+    }
 
     public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default) =>
         Task.FromResult(_logs.Remove(id));

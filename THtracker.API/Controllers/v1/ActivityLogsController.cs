@@ -16,7 +16,7 @@ namespace THtracker.API.Controllers.v1;
 [Route("activity-logs")]
 public class ActivityLogsController : AuthorizedControllerBase
 {
-    private readonly GetActivityLogsByActivityUseCase _getLogsByActivity;
+    private readonly GetActivityLogsUseCase _getLogs;
     private readonly GetActiveActivityLogsUseCase _getActiveLogs;
     private readonly GetActivityLogByIdUseCase _getLogById;
     private readonly StartActivityUseCase _startActivity;
@@ -26,7 +26,7 @@ public class ActivityLogsController : AuthorizedControllerBase
     private readonly GetLogValuesUseCase _getLogValues;
 
     public ActivityLogsController(
-        GetActivityLogsByActivityUseCase getLogsByActivity,
+        GetActivityLogsUseCase getLogs,
         GetActiveActivityLogsUseCase getActiveLogs,
         GetActivityLogByIdUseCase getLogById,
         StartActivityUseCase startActivity,
@@ -36,7 +36,7 @@ public class ActivityLogsController : AuthorizedControllerBase
         GetLogValuesUseCase getLogValues
     )
     {
-        _getLogsByActivity = getLogsByActivity;
+        _getLogs = getLogs;
         _getActiveLogs = getActiveLogs;
         _getLogById = getLogById;
         _startActivity = startActivity;
@@ -47,19 +47,19 @@ public class ActivityLogsController : AuthorizedControllerBase
     }
 
     /// <summary>
-    /// Lista los registros de actividad de una actividad (solo dueño).
+    /// Lista los registros de actividad con filtros opcionales (actividad, rango de fechas).
     /// </summary>
-    /// <param name="activityId">ID de la actividad (query).</param>
+    /// <param name="request">DTO con los parámetros de filtrado.</param>
     /// <param name="cancellationToken">Token de cancelación.</param>
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<ActivityLogResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(
-        [FromQuery] Guid activityId,
+        [FromQuery] GetActivityLogsRequest request,
         CancellationToken cancellationToken
     )
     {
         var userId = GetUserId();
-        var result = await _getLogsByActivity.ExecuteAsync(userId, activityId, cancellationToken);
+        var result = await _getLogs.ExecuteAsync(userId, request, cancellationToken);
         return result.ToActionResult();
     }
 

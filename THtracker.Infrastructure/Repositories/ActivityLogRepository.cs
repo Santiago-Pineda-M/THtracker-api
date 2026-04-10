@@ -79,16 +79,40 @@ public class ActivityLogRepository : IActivityLogRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<IEnumerable<ActivityLog>> GetLogsInPeriodWithDetailsAsync(Guid userId, DateTime start, DateTime end, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<ActivityLog>> GetLogsAsync(
+        Guid userId,
+        Guid? activityId = null,
+        DateTime? start = null,
+        DateTime? end = null,
+        CancellationToken cancellationToken = default
+    )
     {
-        return await _context.ActivityLogs
+        var query = _context.ActivityLogs
             .Include(l => l.LogValues)
                 .ThenInclude(v => v.ValueDefinition)
             .Join(_context.Activities,
                 log => log.ActivityId,
                 activity => activity.Id,
                 (log, activity) => new { Log = log, Activity = activity })
-            .Where(x => x.Activity.UserId == userId && x.Log.StartedAt < end && (x.Log.EndedAt == null || x.Log.EndedAt > start))
+            .Where(x => x.Activity.UserId == userId);
+
+        if (activityId.HasValue)
+        {
+            query = query.Where(x => x.Log.ActivityId == activityId.Value);
+        }
+
+        if (start.HasValue)
+        {
+            query = query.Where(x => x.Log.EndedAt == null || x.Log.EndedAt >= start.Value);
+        }
+
+        if (end.HasValue)
+        {
+            query = query.Where(x => x.Log.StartedAt <= end.Value);
+        }
+
+        return await query
+            .OrderByDescending(x => x.Log.StartedAt)
             .Select(x => x.Log)
             .ToListAsync(cancellationToken);
     }

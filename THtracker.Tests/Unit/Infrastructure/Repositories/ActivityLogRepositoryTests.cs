@@ -74,6 +74,78 @@ public class ActivityLogRepositoryTests : IDisposable
         // Assert
         result.Should().ContainSingle(l => l.Id == log.Id);
     }
+
+    [Fact]
+    public async Task GetLogsAsync_ShouldFilterByActivity_WhenActivityIdIsProvided()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var activity1 = new Activity(userId, Guid.NewGuid(), "Activity 1");
+        var activity2 = new Activity(userId, Guid.NewGuid(), "Activity 2");
+        _context.Activities.AddRange(activity1, activity2);
+
+        var log1 = new ActivityLog(activity1.Id, DateTime.UtcNow.AddHours(-2));
+        var log2 = new ActivityLog(activity2.Id, DateTime.UtcNow.AddHours(-1));
+        _context.ActivityLogs.AddRange(log1, log2);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.GetLogsAsync(userId, activity1.Id);
+
+        // Assert
+        result.Should().ContainSingle();
+        result.First().ActivityId.Should().Be(activity1.Id);
+    }
+
+    [Fact]
+    public async Task GetLogsAsync_ShouldFilterByDateRange_WhenDatesAreProvided()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var activity = new Activity(userId, Guid.NewGuid(), "Activity");
+        _context.Activities.Add(activity);
+
+        // Log in Jan
+        var log1 = new ActivityLog(activity.Id, new DateTime(2024, 1, 15));
+        log1.Stop(new DateTime(2024, 1, 16));
+        
+        // Log in Feb
+        var log2 = new ActivityLog(activity.Id, new DateTime(2024, 2, 15));
+        log2.Stop(new DateTime(2024, 2, 16));
+
+        _context.ActivityLogs.AddRange(log1, log2);
+        await _context.SaveChangesAsync();
+
+        // Act: Filter for February
+        var start = new DateTime(2024, 2, 1);
+        var end = new DateTime(2024, 2, 28);
+        var result = await _repository.GetLogsAsync(userId, null, start, end);
+
+        // Assert
+        result.Should().ContainSingle();
+        result.First().Id.Should().Be(log2.Id);
+    }
+
+    [Fact]
+    public async Task GetLogsAsync_ShouldReturnActiveLogs_WhenFilteringByStartDate()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var activity = new Activity(userId, Guid.NewGuid(), "Activity");
+        _context.Activities.Add(activity);
+
+        // Active log started before 'start'
+        var log = new ActivityLog(activity.Id, new DateTime(2024, 1, 1));
+        _context.ActivityLogs.Add(log);
+        await _context.SaveChangesAsync();
+
+        // Act: Filter starting from Feb
+        var start = new DateTime(2024, 2, 1);
+        var result = await _repository.GetLogsAsync(userId, null, start, null);
+
+        // Assert: Should be included because EndedAt is null
+        result.Should().ContainSingle();
+    }
     
     public void Dispose()
     {
