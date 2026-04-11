@@ -13,6 +13,7 @@ public class LoginUserUseCase
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtProvider _jwtProvider;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly IUserSessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IValidator<LoginRequest> _validator;
 
@@ -21,6 +22,7 @@ public class LoginUserUseCase
         IPasswordHasher passwordHasher,
         IJwtProvider jwtProvider,
         IRefreshTokenRepository refreshTokenRepository,
+        IUserSessionRepository sessionRepository,
         IUnitOfWork unitOfWork,
         IValidator<LoginRequest> validator
     )
@@ -29,6 +31,7 @@ public class LoginUserUseCase
         _passwordHasher = passwordHasher;
         _jwtProvider = jwtProvider;
         _refreshTokenRepository = refreshTokenRepository;
+        _sessionRepository = sessionRepository;
         _unitOfWork = unitOfWork;
         _validator = validator;
     }
@@ -61,6 +64,16 @@ public class LoginUserUseCase
         );
 
         await _refreshTokenRepository.AddAsync(refreshTokenEntity, cancellationToken);
+
+        var userSession = new UserSession(
+            user.Id,
+            refreshTokenEntity.Token,
+            refreshTokenEntity.ExpiryDate,
+            request.DeviceInfo,
+            ipAddress
+        );
+        await _sessionRepository.AddAsync(userSession, cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new TokenResponse(

@@ -11,7 +11,12 @@ public class ActivityValueDefinitionConfiguration
     {
         builder.ToTable("activity_value_definitions");
         builder.HasKey(x => x.Id);
-        builder.Property(x => x.ActivityId).IsRequired();
+        
+        builder.HasOne<Activity>()
+               .WithMany()
+               .HasForeignKey(x => x.ActivityId)
+               .OnDelete(DeleteBehavior.Cascade);
+               
         builder.Property(x => x.Name).IsRequired().HasMaxLength(100);
         builder.Property(x => x.ValueType).IsRequired();
         builder.Property(x => x.IsRequired).IsRequired();

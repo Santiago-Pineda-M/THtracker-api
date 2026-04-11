@@ -11,8 +11,8 @@ using THtracker.Infrastructure.Persistence;
 namespace THtracker.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260214163003_SyncModelWithEntities")]
-    partial class SyncModelWithEntities
+    [Migration("20260411233020_FixActivityValueDefCascade")]
+    partial class FixActivityValueDefCascade
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -32,6 +32,10 @@ namespace THtracker.Infrastructure.Migrations
                     b.Property<Guid>("CategoryId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
@@ -47,6 +51,10 @@ namespace THtracker.Infrastructure.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("activities", (string)null);
                 });
@@ -68,6 +76,8 @@ namespace THtracker.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ActivityId");
+
                     b.ToTable("activity_logs", (string)null);
                 });
 
@@ -88,6 +98,10 @@ namespace THtracker.Infrastructure.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ActivityLogId");
+
+                    b.HasIndex("ValueDefinitionId");
 
                     b.ToTable("activity_log_values", (string)null);
                 });
@@ -130,6 +144,8 @@ namespace THtracker.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ActivityId");
+
                     b.ToTable("activity_value_definitions", (string)null);
                 });
 
@@ -137,6 +153,10 @@ namespace THtracker.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Color")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
@@ -154,6 +174,8 @@ namespace THtracker.Infrastructure.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("categories", (string)null);
                 });
@@ -332,7 +354,7 @@ namespace THtracker.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserRoles");
+                    b.ToTable("user_roles", (string)null);
                 });
 
             modelBuilder.Entity("THtracker.Domain.Entities.UserSession", b =>
@@ -344,20 +366,39 @@ namespace THtracker.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DeviceInfo")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IpAddress")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Location")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("SessionToken")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserAgent")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("user_sessions", (string)null);
                 });
@@ -377,19 +418,63 @@ namespace THtracker.Infrastructure.Migrations
                     b.ToTable("role_permissions");
                 });
 
-            modelBuilder.Entity("user_roles", b =>
+            modelBuilder.Entity("THtracker.Domain.Entities.Activity", b =>
                 {
-                    b.Property<Guid>("RolesId")
-                        .HasColumnType("TEXT");
+                    b.HasOne("THtracker.Domain.Entities.Category", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("TEXT");
+                    b.HasOne("THtracker.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
 
-                    b.HasKey("RolesId", "UserId");
+            modelBuilder.Entity("THtracker.Domain.Entities.ActivityLog", b =>
+                {
+                    b.HasOne("THtracker.Domain.Entities.Activity", null)
+                        .WithMany()
+                        .HasForeignKey("ActivityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
 
-                    b.HasIndex("UserId");
+            modelBuilder.Entity("THtracker.Domain.Entities.ActivityLogValue", b =>
+                {
+                    b.HasOne("THtracker.Domain.Entities.ActivityLog", null)
+                        .WithMany("LogValues")
+                        .HasForeignKey("ActivityLogId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
-                    b.ToTable("user_roles");
+                    b.HasOne("THtracker.Domain.Entities.ActivityValueDefinition", "ValueDefinition")
+                        .WithMany()
+                        .HasForeignKey("ValueDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ValueDefinition");
+                });
+
+            modelBuilder.Entity("THtracker.Domain.Entities.ActivityValueDefinition", b =>
+                {
+                    b.HasOne("THtracker.Domain.Entities.Activity", null)
+                        .WithMany()
+                        .HasForeignKey("ActivityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("THtracker.Domain.Entities.Category", b =>
+                {
+                    b.HasOne("THtracker.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("THtracker.Domain.Entities.RefreshToken", b =>
@@ -429,6 +514,15 @@ namespace THtracker.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("THtracker.Domain.Entities.UserSession", b =>
+                {
+                    b.HasOne("THtracker.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("role_permissions", b =>
                 {
                     b.HasOne("THtracker.Domain.Entities.Permission", null)
@@ -444,19 +538,9 @@ namespace THtracker.Infrastructure.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("user_roles", b =>
+            modelBuilder.Entity("THtracker.Domain.Entities.ActivityLog", b =>
                 {
-                    b.HasOne("THtracker.Domain.Entities.Role", null)
-                        .WithMany()
-                        .HasForeignKey("RolesId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("THtracker.Domain.Entities.User", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.Navigation("LogValues");
                 });
 
             modelBuilder.Entity("THtracker.Domain.Entities.User", b =>

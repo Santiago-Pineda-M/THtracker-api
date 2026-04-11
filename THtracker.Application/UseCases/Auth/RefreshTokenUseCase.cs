@@ -1,6 +1,7 @@
 using THtracker.Application.DTOs.Auth;
 using THtracker.Application.Interfaces;
 using THtracker.Domain.Common;
+using THtracker.Domain.Entities;
 using THtracker.Domain.Interfaces;
 
 namespace THtracker.Application.UseCases.Auth;
@@ -9,18 +10,21 @@ public class RefreshTokenUseCase
 {
     private readonly IUserRepository _userRepository;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly IUserSessionRepository _sessionRepository;
     private readonly IJwtProvider _jwtProvider;
     private readonly IUnitOfWork _unitOfWork;
 
     public RefreshTokenUseCase(
         IUserRepository userRepository,
         IRefreshTokenRepository refreshTokenRepository,
+        IUserSessionRepository sessionRepository,
         IJwtProvider jwtProvider,
         IUnitOfWork unitOfWork
     )
     {
         _userRepository = userRepository;
         _refreshTokenRepository = refreshTokenRepository;
+        _sessionRepository = sessionRepository;
         _jwtProvider = jwtProvider;
         _unitOfWork = unitOfWork;
     }
@@ -58,6 +62,27 @@ public class RefreshTokenUseCase
         var newRefreshTokenEntity = _jwtProvider.GenerateRefreshToken(user, ipAddress, deviceInfo);
 
         await _refreshTokenRepository.AddAsync(newRefreshTokenEntity, cancellationToken);
+
+        // Actualizar sesión de usuario si existe
+        var currentSession = await _sessionRepository.GetByTokenAsync(refreshToken, cancellationToken);
+        if (currentSession != null)
+        {
+            currentSession.Refresh(newRefreshTokenEntity.Token, newRefreshTokenEntity.ExpiryDate, ipAddress, deviceInfo);
+            await _sessionRepository.UpdateAsync(currentSession, cancellationToken);
+        }
+        else
+        {
+            // Si por alguna razón no había sesión asociada (ej. creada antes del control de sesiones), se crea una
+            var newSession = new UserSession(
+                user.Id,
+                newRefreshTokenEntity.Token,
+                newRefreshTokenEntity.ExpiryDate,
+                deviceInfo,
+                ipAddress
+            );
+            await _sessionRepository.AddAsync(newSession, cancellationToken);
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new TokenResponse(

@@ -10,7 +10,12 @@ public class UserSessionConfiguration : IEntityTypeConfiguration<UserSession>
     {
         builder.ToTable("user_sessions");
         builder.HasKey(x => x.Id);
-        builder.Property(x => x.UserId).IsRequired();
+        
+        builder.HasOne<User>()
+               .WithMany()
+               .HasForeignKey(x => x.UserId)
+               .OnDelete(DeleteBehavior.Cascade);
+               
         builder.Property(x => x.SessionToken).IsRequired();
         builder.Property(x => x.DeviceInfo).IsRequired();
         builder.Property(x => x.IpAddress).IsRequired();

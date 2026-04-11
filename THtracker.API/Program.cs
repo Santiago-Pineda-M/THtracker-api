@@ -18,6 +18,7 @@ using THtracker.Application.UseCases.ActivityLogs;
 using THtracker.Application.UseCases.ActivityValueDefinitions;
 using THtracker.Application.UseCases.ActivityLogValues;
 using THtracker.Application.UseCases.Reports;
+using THtracker.Application.UseCases.Sessions;
 using THtracker.Application.UseCases.Seed;
 using THtracker.Application;
 using THtracker.Application.DTOs.Seed;
@@ -97,6 +98,7 @@ builder.Services.AddScoped<IActivityRepository, ActivityRepository>();
 builder.Services.AddScoped<IActivityLogRepository, ActivityLogRepository>();
 builder.Services.AddScoped<IActivityValueDefinitionRepository, ActivityValueDefinitionRepository>();
 builder.Services.AddScoped<IActivityLogValueRepository, ActivityLogValueRepository>();
+builder.Services.AddScoped<IUserSessionRepository, UserSessionRepository>();
 
 
 // Application Interfaces -> Infrastructure Services
@@ -164,6 +166,10 @@ builder.Services.AddScoped<RegisterUserUseCase>();
 builder.Services.AddScoped<LoginUserUseCase>();
 builder.Services.AddScoped<RefreshTokenUseCase>();
 builder.Services.AddScoped<SocialLoginUseCase>();
+
+// Application Layer - Use Cases (Sessions)
+builder.Services.AddScoped<GetUserSessionsUseCase>();
+builder.Services.AddScoped<RevokeSessionUseCase>();
 
 // Application Layer - Use Cases (Seed) - puerto IDataSeeder implementado en Infrastructure
 builder.Services.AddScoped<IDataSeeder, DataSeeder>();

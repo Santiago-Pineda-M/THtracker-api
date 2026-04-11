@@ -10,8 +10,17 @@ public class ActivityConfiguration : IEntityTypeConfiguration<Activity>
     {
         builder.ToTable("activities");
         builder.HasKey(x => x.Id);
-        builder.Property(x => x.UserId).IsRequired();
-        builder.Property(x => x.CategoryId).IsRequired();
+        
+        builder.HasOne<User>()
+               .WithMany()
+               .HasForeignKey(x => x.UserId)
+               .OnDelete(DeleteBehavior.Cascade);
+               
+        builder.HasOne<Category>()
+               .WithMany()
+               .HasForeignKey(x => x.CategoryId)
+               .OnDelete(DeleteBehavior.Cascade);
+               
         builder.Property(x => x.Name).IsRequired().HasMaxLength(100);
         builder.Property(x => x.AllowOverlap).IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();

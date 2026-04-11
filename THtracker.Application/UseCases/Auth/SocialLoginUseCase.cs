@@ -13,6 +13,7 @@ public class SocialLoginUseCase
     private readonly IUserRepository _userRepository;
     private readonly IJwtProvider _jwtProvider;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly IUserSessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IValidator<SocialLoginRequest> _validator;
 
@@ -21,6 +22,7 @@ public class SocialLoginUseCase
         IUserRepository userRepository,
         IJwtProvider jwtProvider,
         IRefreshTokenRepository refreshTokenRepository,
+        IUserSessionRepository sessionRepository,
         IUnitOfWork unitOfWork,
         IValidator<SocialLoginRequest> validator
     )
@@ -29,6 +31,7 @@ public class SocialLoginUseCase
         _userRepository = userRepository;
         _jwtProvider = jwtProvider;
         _refreshTokenRepository = refreshTokenRepository;
+        _sessionRepository = sessionRepository;
         _unitOfWork = unitOfWork;
         _validator = validator;
     }
@@ -77,6 +80,16 @@ public class SocialLoginUseCase
         );
 
         await _refreshTokenRepository.AddAsync(refreshTokenEntity, cancellationToken);
+
+        var userSession = new UserSession(
+            user.Id,
+            refreshTokenEntity.Token,
+            refreshTokenEntity.ExpiryDate,
+            request.DeviceInfo,
+            ipAddress
+        );
+        await _sessionRepository.AddAsync(userSession, cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new TokenResponse(

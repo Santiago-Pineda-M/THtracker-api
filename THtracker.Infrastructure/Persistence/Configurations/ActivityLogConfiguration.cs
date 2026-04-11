@@ -10,7 +10,12 @@ public class ActivityLogConfiguration : IEntityTypeConfiguration<ActivityLog>
     {
         builder.ToTable("activity_logs");
         builder.HasKey(x => x.Id);
-        builder.Property(x => x.ActivityId).IsRequired();
+        
+        builder.HasOne<Activity>()
+               .WithMany()
+               .HasForeignKey(x => x.ActivityId)
+               .OnDelete(DeleteBehavior.Cascade);
+               
         builder.Property(x => x.StartedAt).IsRequired();
         builder.Property(x => x.EndedAt);
     }

@@ -35,4 +35,12 @@ public class UserSession
         IsActive = false;
         RevokedAt = DateTime.UtcNow;
     }
+
+    public void Refresh(string newToken, DateTime newExpiresAt, string ipAddress, string deviceInfo)
+    {
+        SessionToken = newToken;
+        ExpiresAt = newExpiresAt;
+        IpAddress = ipAddress;
+        DeviceInfo = deviceInfo;
+    }
 }
