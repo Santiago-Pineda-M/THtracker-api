@@ -59,7 +59,7 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("Default"))
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Default"))
 );
 
 // Authentication & Authorization
@@ -218,43 +218,9 @@ using (var scope = app.Services.CreateScope())
         migrationsApplied = true;
         logger.LogInformation("Database migrations applied successfully.");
     }
-    catch (InvalidOperationException ex)
+    catch (Exception ex)
     {
-        // Mensaje esperado cuando el modelo cambió pero no se generó una migración
-        if (ex.Message.Contains("PendingModelChangesWarning", StringComparison.OrdinalIgnoreCase)
-            || ex.Message.Contains("pending changes", StringComparison.OrdinalIgnoreCase))
-        {
-            logger.LogWarning(ex, "Pending model changes detected. Attempting fallback strategy.");
-            // Si es SQLite, intentar EnsureCreated() como fallback para despliegues sencillos
-            try
-            {
-                if (db.Database.IsSqlite())
-                {
-                    var created = db.Database.EnsureCreated();
-                    if (created)
-                    {
-                        migrationsApplied = true;
-                        logger.LogInformation("Database created with EnsureCreated() fallback.");
-                    }
-                    else
-                    {
-                        logger.LogWarning("EnsureCreated() did not create the database; it may already exist but model is out of sync.");
-                    }
-                }
-                else
-                {
-                    logger.LogError("Database provider is not SQLite and there are pending model changes. Add a migration and redeploy.");
-                }
-            }
-            catch (Exception e)
-            {
-                logger.LogError(e, "EnsureCreated() fallback failed.");
-            }
-        }
-        else
-        {
-            throw;
-        }
+        logger.LogError(ex, "An error occurred while migrating the database.");
     }
 
     // Ejecutar seed sólo si la migración/creación fue exitosa; atrapar errores para no detener la app
