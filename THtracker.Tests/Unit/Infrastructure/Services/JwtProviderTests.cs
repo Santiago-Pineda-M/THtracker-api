@@ -39,8 +39,10 @@ public class JwtProviderTests
         // Arrange
         var user = new User("Test User", "test@example.com");
 
+        var sessionId = Guid.NewGuid();
+
         // Act
-        var token = _jwtProvider.GenerateAccessToken(user);
+        var token = _jwtProvider.GenerateAccessToken(user, sessionId);
 
         // Assert
         token.Should().NotBeNullOrEmpty();
@@ -59,8 +61,10 @@ public class JwtProviderTests
         // Arrange
         var user = new User("John Doe", "john@example.com");
 
+        var sessionId = Guid.NewGuid();
+
         // Act
-        var token = _jwtProvider.GenerateAccessToken(user);
+        var token = _jwtProvider.GenerateAccessToken(user, sessionId);
 
         // Assert
         var tokenHandler = new JwtSecurityTokenHandler();
@@ -69,6 +73,7 @@ public class JwtProviderTests
         var subClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub);
         var emailClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Email);
         var jtiClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Jti);
+        var sidClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == "sid");
 
         subClaim.Should().NotBeNull();
         subClaim!.Value.Should().Be(user.Id.ToString());
@@ -78,6 +83,9 @@ public class JwtProviderTests
         
         jtiClaim.Should().NotBeNull();
         jtiClaim!.Value.Should().NotBeNullOrEmpty();
+
+        sidClaim.Should().NotBeNull();
+        sidClaim!.Value.Should().Be(sessionId.ToString());
     }
 
     [Fact]
@@ -86,9 +94,10 @@ public class JwtProviderTests
         // Arrange
         var user = new User("Test User", "test@example.com");
         var beforeGeneration = DateTime.UtcNow;
+        var sessionId = Guid.NewGuid();
 
         // Act
-        var token = _jwtProvider.GenerateAccessToken(user);
+        var token = _jwtProvider.GenerateAccessToken(user, sessionId);
 
         // Assert
         var tokenHandler = new JwtSecurityTokenHandler();

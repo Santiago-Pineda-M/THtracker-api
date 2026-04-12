@@ -72,7 +72,6 @@ public class SocialLoginUseCase
             }
         }
 
-        string accessToken = _jwtProvider.GenerateAccessToken(user);
         var refreshTokenEntity = _jwtProvider.GenerateRefreshToken(
             user,
             ipAddress,
@@ -89,6 +88,8 @@ public class SocialLoginUseCase
             ipAddress
         );
         await _sessionRepository.AddAsync(userSession, cancellationToken);
+
+        string accessToken = _jwtProvider.GenerateAccessToken(user, userSession.Id);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

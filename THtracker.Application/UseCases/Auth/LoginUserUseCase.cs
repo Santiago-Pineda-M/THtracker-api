@@ -55,14 +55,11 @@ public class LoginUserUseCase
             return Result.Failure<TokenResponse>(new Error("Unauthorized", "Invalid Credentials"));
         }
 
-        string accessToken = _jwtProvider.GenerateAccessToken(user);
-
         var refreshTokenEntity = _jwtProvider.GenerateRefreshToken(
             user,
             ipAddress,
             request.DeviceInfo
         );
-
         await _refreshTokenRepository.AddAsync(refreshTokenEntity, cancellationToken);
 
         var userSession = new UserSession(
@@ -73,6 +70,8 @@ public class LoginUserUseCase
             ipAddress
         );
         await _sessionRepository.AddAsync(userSession, cancellationToken);
+
+        string accessToken = _jwtProvider.GenerateAccessToken(user, userSession.Id);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

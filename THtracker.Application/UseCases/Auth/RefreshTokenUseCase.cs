@@ -58,21 +58,19 @@ public class RefreshTokenUseCase
         tokenEntity.Revoke(ipAddress, "Token refreshed");
         await _refreshTokenRepository.UpdateAsync(tokenEntity, cancellationToken);
 
-        string newAccessToken = _jwtProvider.GenerateAccessToken(user);
         var newRefreshTokenEntity = _jwtProvider.GenerateRefreshToken(user, ipAddress, deviceInfo);
-
         await _refreshTokenRepository.AddAsync(newRefreshTokenEntity, cancellationToken);
 
-        // Actualizar sesión de usuario si existe
+        Guid sessionId;
         var currentSession = await _sessionRepository.GetByTokenAsync(refreshToken, cancellationToken);
         if (currentSession != null)
         {
             currentSession.Refresh(newRefreshTokenEntity.Token, newRefreshTokenEntity.ExpiryDate, ipAddress, deviceInfo);
             await _sessionRepository.UpdateAsync(currentSession, cancellationToken);
+            sessionId = currentSession.Id;
         }
         else
         {
-            // Si por alguna razón no había sesión asociada (ej. creada antes del control de sesiones), se crea una
             var newSession = new UserSession(
                 user.Id,
                 newRefreshTokenEntity.Token,
@@ -81,7 +79,10 @@ public class RefreshTokenUseCase
                 ipAddress
             );
             await _sessionRepository.AddAsync(newSession, cancellationToken);
+            sessionId = newSession.Id;
         }
+
+        string newAccessToken = _jwtProvider.GenerateAccessToken(user, sessionId);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
