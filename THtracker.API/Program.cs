@@ -170,6 +170,7 @@ builder.Services.AddScoped<SocialLoginUseCase>();
 // Application Layer - Use Cases (Sessions)
 builder.Services.AddScoped<GetUserSessionsUseCase>();
 builder.Services.AddScoped<RevokeSessionUseCase>();
+builder.Services.AddScoped<LogoutCurrentSessionUseCase>();
 
 // Application Layer - Use Cases (Seed) - puerto IDataSeeder implementado en Infrastructure
 builder.Services.AddScoped<IDataSeeder, DataSeeder>();

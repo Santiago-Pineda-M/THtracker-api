@@ -22,4 +22,14 @@ public abstract class AuthorizedControllerBase : ControllerBase
         }
         return userId;
     }
+
+    protected Guid GetSessionId()
+    {
+        var sessionIdClaim = User.FindFirstValue("sid");
+        if (sessionIdClaim == null || !Guid.TryParse(sessionIdClaim, out var sessionId))
+        {
+            throw new UnauthorizedAccessException("Session ID claim not found.");
+        }
+        return sessionId;
+    }
 }
