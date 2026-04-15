@@ -1,35 +1,37 @@
 using System.Text;
 using System.Text.RegularExpressions;
-using Microsoft.OpenApi.Models;
-using Microsoft.AspNetCore.Mvc;
-using THtracker.API.Extensions;
+using DotNetEnv;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using THtracker.Application.Interfaces;
-using THtracker.Application.UseCases.Auth;
-using THtracker.Application.UseCases.Users;
-using THtracker.Application.UseCases.Roles;
-using THtracker.Application.UseCases.Categories;
-using THtracker.Application.UseCases.Activities;
-using THtracker.Application.UseCases.ActivityLogs;
-using THtracker.Application.UseCases.ActivityValueDefinitions;
-using THtracker.Application.UseCases.ActivityLogValues;
-using THtracker.Application.UseCases.Reports;
-using THtracker.Application.UseCases.Sessions;
-using THtracker.Application.UseCases.Seed;
+using Microsoft.OpenApi.Models;
+using THtracker.API.Extensions;
+using THtracker.API.Middlewares;
+using THtracker.API.Routing;
 using THtracker.Application;
 using THtracker.Application.DTOs.Seed;
+using THtracker.Application.Interfaces;
+using THtracker.Application.UseCases.Activities;
+using THtracker.Application.UseCases.ActivityLogs;
+using THtracker.Application.UseCases.ActivityLogValues;
+using THtracker.Application.UseCases.ActivityValueDefinitions;
+using THtracker.Application.UseCases.Auth;
+using THtracker.Application.UseCases.Categories;
+using THtracker.Application.UseCases.Reports;
+using THtracker.Application.UseCases.Roles;
+using THtracker.Application.UseCases.Seed;
+using THtracker.Application.UseCases.Sessions;
+using THtracker.Application.UseCases.TaskLists;
+using THtracker.Application.UseCases.Tasks;
+using THtracker.Application.UseCases.Users;
 using THtracker.Domain.Interfaces;
 using THtracker.Infrastructure.Persistence;
 using THtracker.Infrastructure.Repositories;
 using THtracker.Infrastructure.Seeding;
 using THtracker.Infrastructure.Services;
-using THtracker.API.Middlewares;
-using THtracker.API.Routing;
-using DotNetEnv;
 
 Env.Load();
 
@@ -52,10 +54,8 @@ var allowedOrigins = corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntrie
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins(allowedOrigins)
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials());
+        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()
+    );
 });
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -91,7 +91,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-builder.Services.AddScoped<IRoleRepository, RoleRepository>();  
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IUserRoleRepository, UserRoleRepository>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<IActivityRepository, ActivityRepository>();
@@ -99,13 +99,13 @@ builder.Services.AddScoped<IActivityLogRepository, ActivityLogRepository>();
 builder.Services.AddScoped<IActivityValueDefinitionRepository, ActivityValueDefinitionRepository>();
 builder.Services.AddScoped<IActivityLogValueRepository, ActivityLogValueRepository>();
 builder.Services.AddScoped<IUserSessionRepository, UserSessionRepository>();
-
+builder.Services.AddScoped<ITaskListRepository, TaskListRepository>();
+builder.Services.AddScoped<ITaskRepository, TaskRepository>();
 
 // Application Interfaces -> Infrastructure Services
 builder.Services.AddScoped<IJwtProvider, JwtProvider>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<ISocialAuthenticator, DummySocialAuthenticator>();
-
 
 // Application Layer - Use Cases (Users)
 builder.Services.AddScoped<GetAllUsersUseCase>();
@@ -175,6 +175,21 @@ builder.Services.AddScoped<RevokeSessionUseCase>();
 builder.Services.AddScoped<IDataSeeder, DataSeeder>();
 builder.Services.AddScoped<SeedDefaultDataUseCase>();
 
+// Application Layer - Use Cases (TaskLists)
+builder.Services.AddScoped<GetAllTaskListsUseCase>();
+builder.Services.AddScoped<GetTaskListByIdUseCase>();
+builder.Services.AddScoped<CreateTaskListUseCase>();
+builder.Services.AddScoped<UpdateTaskListUseCase>();
+builder.Services.AddScoped<DeleteTaskListUseCase>();
+
+// Application Layer - Use Cases (Tasks)
+builder.Services.AddScoped<GetAllTasksByTaskListUseCase>();
+builder.Services.AddScoped<GetTaskByIdUseCase>();
+builder.Services.AddScoped<CreateTaskItemUseCase>();
+builder.Services.AddScoped<UpdateTaskItemUseCase>();
+builder.Services.AddScoped<ToggleTaskCompletionUseCase>();
+builder.Services.AddScoped<DeleteTaskItemUseCase>();
+
 // FluentValidation
 builder.Services.AddValidatorsFromAssemblyContaining<IApplicationAssemblyMarker>();
 builder.Services.AddFluentValidationAutoValidation();
@@ -239,7 +254,10 @@ using (var scope = app.Services.CreateScope())
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Seeding default data failed. The application will continue running without seed.");
+            logger.LogError(
+                e,
+                "Seeding default data failed. The application will continue running without seed."
+            );
         }
     }
     else

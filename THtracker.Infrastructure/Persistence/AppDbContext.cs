@@ -21,6 +21,8 @@ public class AppDbContext : DbContext
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
+    public DbSet<TaskList> TaskLists => Set<TaskList>();
+    public DbSet<TaskItem> Tasks => Set<TaskItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
