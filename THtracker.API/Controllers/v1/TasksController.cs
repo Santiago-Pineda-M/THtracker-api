@@ -45,9 +45,8 @@ public class TasksController : AuthorizedControllerBase
     )
     {
         var userId = GetUserId();
-        var result = this
-            .getAllTasksByTaskList.ExecuteAsync(userId, taskListId, cancellationToken)
-            .Result;
+        var result = await this
+            .getAllTasksByTaskList.ExecuteAsync(userId, taskListId, cancellationToken);
         return result.ToActionResult();
     }
 
@@ -58,7 +57,7 @@ public class TasksController : AuthorizedControllerBase
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
     {
         var userId = GetUserId();
-        var result = this.getTaskById.ExecuteAsync(userId, id, cancellationToken).Result;
+        var result = await this.getTaskById.ExecuteAsync(userId, id, cancellationToken);
         return result.ToActionResult();
     }
 
@@ -73,7 +72,7 @@ public class TasksController : AuthorizedControllerBase
     )
     {
         var userId = GetUserId();
-        var result = this.createTask.ExecuteAsync(userId, request, cancellationToken).Result;
+        var result = await this.createTask.ExecuteAsync(userId, request, cancellationToken);
 
         if (result.IsSuccess)
         {
@@ -99,7 +98,7 @@ public class TasksController : AuthorizedControllerBase
     )
     {
         var userId = GetUserId();
-        var result = this.updateTask.ExecuteAsync(userId, id, request, cancellationToken).Result;
+        var result = await this.updateTask.ExecuteAsync(userId, id, request, cancellationToken);
         return result.ToActionResult();
     }
 
@@ -110,7 +109,7 @@ public class TasksController : AuthorizedControllerBase
     public async Task<IActionResult> ToggleCompletion(Guid id, CancellationToken cancellationToken)
     {
         var userId = GetUserId();
-        var result = this.toggleTaskCompletion.ExecuteAsync(userId, id, cancellationToken).Result;
+        var result = await this.toggleTaskCompletion.ExecuteAsync(userId, id, cancellationToken);
 
         if (result.IsSuccess)
         {
@@ -127,7 +126,7 @@ public class TasksController : AuthorizedControllerBase
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         var userId = GetUserId();
-        var result = this.deleteTask.ExecuteAsync(userId, id, cancellationToken).Result;
+        var result = await this.deleteTask.ExecuteAsync(userId, id, cancellationToken);
 
         if (result.IsSuccess)
         {

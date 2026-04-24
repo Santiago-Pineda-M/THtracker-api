@@ -11,7 +11,7 @@ public class TaskItemConfiguration : IEntityTypeConfiguration<TaskItem>
         builder.ToTable("tasks");
         builder.HasKey(x => x.Id);
 
-        builder.HasOne<TaskList>().WithMany(t => t.Tasks).HasForeignKey(x => x.TaskListId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(x => x.TaskList).WithMany(t => t.Tasks).HasForeignKey(x => x.TaskListId).OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
 

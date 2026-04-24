@@ -29,7 +29,7 @@ public class TaskItem
         this.UserId = userId;
         this.Content = content;
         this.IsCompleted = false;
-        this.DueDate = dueDate;
+        this.DueDate = dueDate.HasValue ? DateTime.SpecifyKind(dueDate.Value, DateTimeKind.Utc) : null;
         this.CreatedAt = DateTime.UtcNow;
         this.UpdatedAt = DateTime.UtcNow;
     }
@@ -49,7 +49,7 @@ public class TaskItem
     public void UpdateContent(string content, DateTime? dueDate)
     {
         this.Content = content;
-        this.DueDate = dueDate;
+        this.DueDate = dueDate.HasValue ? DateTime.SpecifyKind(dueDate.Value, DateTimeKind.Utc) : null;
         this.UpdatedAt = DateTime.UtcNow;
     }
 
