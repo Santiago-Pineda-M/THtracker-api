@@ -1,44 +1,39 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MediatR;
 using THtracker.API.Extensions;
-using THtracker.Application.DTOs.Reports;
-using THtracker.Application.UseCases.Reports;
+using THtracker.Application.Features.Reports;
+using THtracker.Application.Features.Reports.Queries.GetActivityReport;
 
 namespace THtracker.API.Controllers.v1;
 
 /// <summary>
-/// Reportes y estadísticas de actividad.
+/// Reportes detallados de actividades.
 /// </summary>
 [Authorize]
 [ApiController]
 [Route("reports")]
-public class ReportsController : AuthorizedControllerBase
+public sealed class ReportsController : AuthorizedControllerBase
 {
-    private readonly GetUserActivityReportUseCase _getReport;
+    private readonly ISender _sender;
 
-    public ReportsController(GetUserActivityReportUseCase getReport)
+    public ReportsController(ISender sender)
     {
-        _getReport = getReport;
+        _sender = sender;
     }
 
     /// <summary>
-    /// Genera un reporte completo de actividades para el usuario en un periodo.
+    /// Genera un reporte detallado de registros de actividades con anidamiento completo (Categorías, Valores, etc).
     /// </summary>
-    /// <param name="startDate">Fecha de inicio del periodo.</param>
-    /// <param name="endDate">Fecha de fin del periodo.</param>
-    /// <param name="cancellationToken">Token de cancelación.</param>
+    /// <param name="query">Filtros de rango de fechas, categoría y actividad.</param>
+    /// <param name="ct">Token de cancelación.</param>
     [HttpGet("activities")]
     [ProducesResponseType(typeof(ActivityReportResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> GetActivityReport(
-        [FromQuery] DateTime startDate,
-        [FromQuery] DateTime endDate,
-        CancellationToken cancellationToken
-    )
+    public async Task<IActionResult> GetActivityReport([FromQuery] GetActivityReportQuery query, CancellationToken ct)
     {
         var userId = GetUserId();
-        var request = new ActivityReportRequest(startDate, endDate);
-        var result = await _getReport.ExecuteAsync(userId, request, cancellationToken);
+        var result = await _sender.Send(query with { UserId = userId }, ct);
         return result.ToActionResult();
     }
 }

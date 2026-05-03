@@ -17,7 +17,7 @@ namespace THtracker.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.2")
+                .HasAnnotation("ProductVersion", "10.0.7")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -56,6 +56,8 @@ namespace THtracker.Infrastructure.Migrations
 
                     b.HasIndex("CategoryId");
 
+                    b.HasIndex("Name");
+
                     b.HasIndex("UserId");
 
                     b.ToTable("activities", (string)null);
@@ -79,6 +81,12 @@ namespace THtracker.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ActivityId");
+
+                    b.HasIndex("EndedAt");
+
+                    b.HasIndex("StartedAt");
+
+                    b.HasIndex("ActivityId", "StartedAt");
 
                     b.ToTable("activity_logs", (string)null);
                 });
@@ -164,6 +172,9 @@ namespace THtracker.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -176,6 +187,8 @@ namespace THtracker.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Name");
 
                     b.HasIndex("UserId");
 
@@ -300,9 +313,6 @@ namespace THtracker.Infrastructure.Migrations
                     b.Property<Guid>("TaskListId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("TaskListId1")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -312,8 +322,6 @@ namespace THtracker.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("TaskListId");
-
-                    b.HasIndex("TaskListId1");
 
                     b.HasIndex("UserId");
 
@@ -569,15 +577,11 @@ namespace THtracker.Infrastructure.Migrations
 
             modelBuilder.Entity("THtracker.Domain.Entities.TaskItem", b =>
                 {
-                    b.HasOne("THtracker.Domain.Entities.TaskList", null)
+                    b.HasOne("THtracker.Domain.Entities.TaskList", "TaskList")
                         .WithMany("Tasks")
                         .HasForeignKey("TaskListId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("THtracker.Domain.Entities.TaskList", "TaskList")
-                        .WithMany()
-                        .HasForeignKey("TaskListId1");
 
                     b.HasOne("THtracker.Domain.Entities.User", null)
                         .WithMany()

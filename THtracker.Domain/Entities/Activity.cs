@@ -1,6 +1,6 @@
 namespace THtracker.Domain.Entities;
 
-public class Activity
+public sealed class Activity
 {
     public Guid Id { get; private set; }
     public Guid UserId { get; private set; }
@@ -25,8 +25,9 @@ public class Activity
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void Update(string name, string color, bool allowOverlap)
+    public void Update(Guid categoryId, string name, string color, bool allowOverlap)
     {
+        CategoryId = categoryId;
         Name = name;
         Color = color;
         AllowOverlap = allowOverlap;

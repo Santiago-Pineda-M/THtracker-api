@@ -13,6 +13,7 @@ public class ActivityLogValueConfiguration : IEntityTypeConfiguration<ActivityLo
         builder.Property(x => x.ActivityLogId).IsRequired();
         builder.Property(x => x.ValueDefinitionId).IsRequired();
         builder.Property(x => x.Value).IsRequired();
+        
         builder.HasOne<ActivityLog>()
             .WithMany(l => l.LogValues)
             .HasForeignKey(x => x.ActivityLogId)
@@ -21,5 +22,8 @@ public class ActivityLogValueConfiguration : IEntityTypeConfiguration<ActivityLo
         builder.HasOne(x => x.ValueDefinition)
             .WithMany()
             .HasForeignKey(x => x.ValueDefinitionId);
+
+        // Índice para carga rápida de valores en reportes
+        builder.HasIndex(x => x.ActivityLogId);
     }
 }

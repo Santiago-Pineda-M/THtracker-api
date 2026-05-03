@@ -19,5 +19,9 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.Property(x => x.Name).IsRequired().HasMaxLength(100);
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.UpdatedAt).IsRequired();
+
+        // Índices para optimización
+        builder.HasIndex(x => x.UserId);
+        builder.HasIndex(x => x.Name);
     }
 }

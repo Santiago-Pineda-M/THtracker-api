@@ -1,8 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MediatR;
 using THtracker.API.Extensions;
-using THtracker.Application.DTOs.Categories;
-using THtracker.Application.UseCases.Categories;
+using THtracker.Application.Features.Categories;
+using THtracker.Application.Features.Categories.Commands.CreateCategory;
+using THtracker.Application.Features.Categories.Commands.UpdateCategory;
+using THtracker.Application.Features.Categories.Commands.DeleteCategory;
+using THtracker.Application.Features.Categories.Queries.GetCategoryById;
+using THtracker.Application.Features.Categories.Queries.GetAllCategories;
 
 namespace THtracker.API.Controllers.v1;
 
@@ -12,27 +17,13 @@ namespace THtracker.API.Controllers.v1;
 [Authorize]
 [ApiController]
 [Route("categories")]
-public class CategoriesController : AuthorizedControllerBase
+public sealed class CategoriesController : AuthorizedControllerBase
 {
-    private readonly GetAllCategoriesUseCase _getCategoriesByUser;
-    private readonly GetCategoryByIdUseCase _getCategoryById;
-    private readonly CreateCategoryUseCase _createCategory;
-    private readonly UpdateCategoryUseCase _updateCategory;
-    private readonly DeleteCategoryUseCase _deleteCategory;
+    private readonly ISender _sender;
 
-    public CategoriesController(
-        GetAllCategoriesUseCase getCategoriesByUser,
-        GetCategoryByIdUseCase getCategoryById,
-        CreateCategoryUseCase createCategory,
-        UpdateCategoryUseCase updateCategory,
-        DeleteCategoryUseCase deleteCategory
-    )
+    public CategoriesController(ISender sender)
     {
-        _getCategoriesByUser = getCategoriesByUser;
-        _getCategoryById = getCategoryById;
-        _createCategory = createCategory;
-        _updateCategory = updateCategory;
-        _deleteCategory = deleteCategory;
+        _sender = sender;
     }
 
     /// <summary>
@@ -43,7 +34,7 @@ public class CategoriesController : AuthorizedControllerBase
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
         var userId = GetUserId();
-        var categories = await _getCategoriesByUser.ExecuteAsync(userId, cancellationToken);
+        var categories = await _sender.Send(new GetAllCategoriesQuery(userId), cancellationToken);
         return Ok(categories);
     }
 
@@ -55,25 +46,25 @@ public class CategoriesController : AuthorizedControllerBase
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(CategoryResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
     {
         var userId = GetUserId();
-        var result = await _getCategoryById.ExecuteAsync(userId, id, cancellationToken);
+        var result = await _sender.Send(new GetCategoryByIdQuery(id, userId), cancellationToken);
         return result.ToActionResult();
     }
 
     /// <summary>
     /// Crea una nueva categoría para el usuario autenticado.
     /// </summary>
-    /// <param name="request">Nombre de la categoría.</param>
+    /// <param name="command">Nombre de la categoría.</param>
+    /// <param name="ct">Token de cancelación.</param>
     [HttpPost]
     [ProducesResponseType(typeof(CategoryResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Create([FromBody] CreateCategoryRequest request)
+    public async Task<IActionResult> Create([FromBody] CreateCategoryCommand command, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _createCategory.ExecuteAsync(userId, request);
+        var result = await _sender.Send(command with { UserId = userId }, ct);
         
         if (result.IsSuccess)
         {
@@ -87,16 +78,16 @@ public class CategoriesController : AuthorizedControllerBase
     /// Actualiza una categoría (solo dueño).
     /// </summary>
     /// <param name="id">ID de la categoría.</param>
-    /// <param name="request">Nuevo nombre.</param>
+    /// <param name="command">Nuevos datos.</param>
+    /// <param name="ct">Token de cancelación.</param>
     [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(CategoryResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateCategoryRequest request)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateCategoryCommand command, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _updateCategory.ExecuteAsync(userId, id, request);
+        var result = await _sender.Send(command with { Id = id, UserId = userId }, ct);
         return result.ToActionResult();
     }
 
@@ -104,14 +95,14 @@ public class CategoriesController : AuthorizedControllerBase
     /// Elimina una categoría (solo dueño).
     /// </summary>
     /// <param name="id">ID de la categoría.</param>
+    /// <param name="ct">Token de cancelación.</param>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete(Guid id)
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _deleteCategory.ExecuteAsync(userId, id);
+        var result = await _sender.Send(new DeleteCategoryCommand(id, userId), ct);
         return result.ToActionResult();
     }
 }

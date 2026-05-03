@@ -1,8 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MediatR;
 using THtracker.API.Extensions;
-using THtracker.Application.DTOs.Activities;
-using THtracker.Application.UseCases.Activities;
+using THtracker.Application.Features.Activities;
+using THtracker.Application.Features.Activities.Commands.CreateActivity;
+using THtracker.Application.Features.Activities.Commands.UpdateActivity;
+using THtracker.Application.Features.Activities.Commands.DeleteActivity;
+using THtracker.Application.Features.Activities.Queries.GetActivityById;
+using THtracker.Application.Features.Activities.Queries.GetAllActivities;
 
 namespace THtracker.API.Controllers.v1;
 
@@ -12,27 +17,13 @@ namespace THtracker.API.Controllers.v1;
 [Authorize]
 [ApiController]
 [Route("activities")]
-public class ActivitiesController : AuthorizedControllerBase
+public sealed class ActivitiesController : AuthorizedControllerBase
 {
-    private readonly GetAllActivitiesUseCase _getActivitiesByUser;
-    private readonly GetActivityByIdUseCase _getActivityById;
-    private readonly CreateActivityUseCase _createActivity;
-    private readonly UpdateActivityUseCase _updateActivity;
-    private readonly DeleteActivityUseCase _deleteActivity;
+    private readonly ISender _sender;
 
-    public ActivitiesController(
-        GetAllActivitiesUseCase getActivitiesByUser,
-        GetActivityByIdUseCase getActivityById,
-        CreateActivityUseCase createActivity,
-        UpdateActivityUseCase updateActivity,
-        DeleteActivityUseCase deleteActivity
-    )
+    public ActivitiesController(ISender sender)
     {
-        _getActivitiesByUser = getActivitiesByUser;
-        _getActivityById = getActivityById;
-        _createActivity = createActivity;
-        _updateActivity = updateActivity;
-        _deleteActivity = deleteActivity;
+        _sender = sender;
     }
 
     /// <summary>
@@ -43,7 +34,7 @@ public class ActivitiesController : AuthorizedControllerBase
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
         var userId = GetUserId();
-        var activities = await _getActivitiesByUser.ExecuteAsync(userId, cancellationToken);
+        var activities = await _sender.Send(new GetAllActivitiesQuery(userId), cancellationToken);
         return Ok(activities);
     }
 
@@ -51,29 +42,29 @@ public class ActivitiesController : AuthorizedControllerBase
     /// Obtiene una actividad específica por su ID.
     /// </summary>
     /// <param name="id">ID de la actividad.</param>
-    /// <param name="cancellationToken">Token de cancelación.</param>
+    /// <param name="ct">Token de cancelación.</param>
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(ActivityResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _getActivityById.ExecuteAsync(userId, id, cancellationToken);
+        var result = await _sender.Send(new GetActivityByIdQuery(id, userId), ct);
         return result.ToActionResult();
     }
 
     /// <summary>
     /// Crea una nueva actividad para el usuario autenticado.
     /// </summary>
-    /// <param name="request">Nombre, categoría y opciones.</param>
+    /// <param name="command">Nombre, categoría y opciones.</param>
+    /// <param name="ct">Token de cancelación.</param>
     [HttpPost]
     [ProducesResponseType(typeof(ActivityResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Create([FromBody] CreateActivityRequest request)
+    public async Task<IActionResult> Create([FromBody] CreateActivityCommand command, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _createActivity.ExecuteAsync(userId, request);
+        var result = await _sender.Send(command with { UserId = userId }, ct);
         
         if (result.IsSuccess)
         {
@@ -87,16 +78,16 @@ public class ActivitiesController : AuthorizedControllerBase
     /// Actualiza una actividad (solo dueño).
     /// </summary>
     /// <param name="id">ID de la actividad.</param>
-    /// <param name="request">Nuevos datos.</param>
+    /// <param name="command">Nuevos datos.</param>
+    /// <param name="ct">Token de cancelación.</param>
     [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(ActivityResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateActivityRequest request)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateActivityCommand command, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _updateActivity.ExecuteAsync(userId, id, request);
+        var result = await _sender.Send(command with { Id = id, UserId = userId }, ct);
         return result.ToActionResult();
     }
 
@@ -104,14 +95,14 @@ public class ActivitiesController : AuthorizedControllerBase
     /// Elimina una actividad (solo dueño).
     /// </summary>
     /// <param name="id">ID de la actividad.</param>
+    /// <param name="ct">Token de cancelación.</param>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete(Guid id)
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _deleteActivity.ExecuteAsync(userId, id);
+        var result = await _sender.Send(new DeleteActivityCommand(id, userId), ct);
         return result.ToActionResult();
     }
 }

@@ -1,8 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MediatR;
 using THtracker.API.Extensions;
-using THtracker.Application.DTOs.ActivityValueDefinitions;
-using THtracker.Application.UseCases.ActivityValueDefinitions;
+using THtracker.Application.Features.ActivityValueDefinitions;
+using THtracker.Application.Features.ActivityValueDefinitions.Commands.CreateValueDefinition;
+using THtracker.Application.Features.ActivityValueDefinitions.Commands.UpdateValueDefinition;
+using THtracker.Application.Features.ActivityValueDefinitions.Commands.DeleteValueDefinition;
+using THtracker.Application.Features.ActivityValueDefinitions.Queries.GetAllValueDefinitions;
+using THtracker.Application.Features.ActivityValueDefinitions.Queries.GetValueDefinitionById;
 
 namespace THtracker.API.Controllers.v1;
 
@@ -12,78 +17,53 @@ namespace THtracker.API.Controllers.v1;
 [Authorize]
 [ApiController]
 [Route("activities/{activityId:guid}/definitions")]
-public class ActivityValueDefinitionsController : AuthorizedControllerBase
+public sealed class ActivityValueDefinitionsController : AuthorizedControllerBase
 {
-    private readonly GetValueDefinitionsUseCase _getDefinitions;
-    private readonly GetValueDefinitionByIdUseCase _getDefinitionById;
-    private readonly CreateValueDefinitionUseCase _createDefinition;
-    private readonly UpdateValueDefinitionUseCase _updateDefinition;
-    private readonly DeleteValueDefinitionUseCase _deleteDefinition;
+    private readonly ISender _sender;
 
-    public ActivityValueDefinitionsController(
-        GetValueDefinitionsUseCase getDefinitions,
-        GetValueDefinitionByIdUseCase getDefinitionById,
-        CreateValueDefinitionUseCase createDefinition,
-        UpdateValueDefinitionUseCase updateDefinition,
-        DeleteValueDefinitionUseCase deleteDefinition)
+    public ActivityValueDefinitionsController(ISender sender)
     {
-        _getDefinitions = getDefinitions;
-        _getDefinitionById = getDefinitionById;
-        _createDefinition = createDefinition;
-        _updateDefinition = updateDefinition;
-        _deleteDefinition = deleteDefinition;
+        _sender = sender;
     }
 
     /// <summary>
     /// Lista las definiciones de valores de una actividad.
     /// </summary>
-    /// <param name="activityId">ID de la actividad.</param>
-    /// <param name="cancellationToken">Token de cancelación.</param>
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<ActivityValueDefinitionResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetAll(Guid activityId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAll(Guid activityId, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _getDefinitions.ExecuteAsync(userId, activityId, cancellationToken);
+        var result = await _sender.Send(new GetAllValueDefinitionsQuery(activityId, userId), ct);
         return result.ToActionResult();
     }
 
     /// <summary>
     /// Obtiene una definición de valor por ID.
     /// </summary>
-    /// <param name="activityId">ID de la actividad.</param>
-    /// <param name="definitionId">ID de la definición.</param>
-    /// <param name="cancellationToken">Token de cancelación.</param>
     [HttpGet("{definitionId:guid}")]
     [ProducesResponseType(typeof(ActivityValueDefinitionResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetById(Guid activityId, Guid definitionId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetById(Guid activityId, Guid definitionId, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _getDefinitionById.ExecuteAsync(userId, activityId, definitionId, cancellationToken);
+        var result = await _sender.Send(new GetValueDefinitionByIdQuery(activityId, definitionId, userId), ct);
         return result.ToActionResult();
     }
 
     /// <summary>
     /// Crea una definición de valor para la actividad.
     /// </summary>
-    /// <param name="activityId">ID de la actividad.</param>
-    /// <param name="request">Nombre, tipo de valor, obligatorio, unidad, mín/máx.</param>
-    /// <param name="cancellationToken">Token de cancelación.</param>
     [HttpPost]
     [ProducesResponseType(typeof(ActivityValueDefinitionResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Create(
         Guid activityId,
-        [FromBody] CreateValueDefinitionRequest request,
-        CancellationToken cancellationToken)
+        [FromBody] CreateValueDefinitionCommand command,
+        CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _createDefinition.ExecuteAsync(userId, activityId, request, cancellationToken);
+        var result = await _sender.Send(command with { ActivityId = activityId, UserId = userId }, ct);
         
         if (result.IsSuccess)
         {
@@ -96,44 +76,37 @@ public class ActivityValueDefinitionsController : AuthorizedControllerBase
     /// <summary>
     /// Actualiza una definición de valor.
     /// </summary>
-    /// <param name="activityId">ID de la actividad.</param>
-    /// <param name="definitionId">ID de la definición.</param>
-    /// <param name="request">Datos a actualizar.</param>
-    /// <param name="cancellationToken">Token de cancelación.</param>
     [HttpPut("{definitionId:guid}")]
     [ProducesResponseType(typeof(ActivityValueDefinitionResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(
-        Guid activityId,
-        Guid definitionId,
-        [FromBody] UpdateValueDefinitionRequest request,
-        CancellationToken cancellationToken)
+        Guid activityId, 
+        Guid definitionId, 
+        [FromBody] UpdateValueDefinitionCommand command, 
+        CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _updateDefinition.ExecuteAsync(userId, activityId, definitionId, request, cancellationToken);
+        var result = await _sender.Send(command with { ActivityId = activityId, DefinitionId = definitionId, UserId = userId }, ct);
         return result.ToActionResult();
     }
 
     /// <summary>
     /// Elimina una definición de valor.
     /// </summary>
-    /// <param name="activityId">ID de la actividad.</param>
-    /// <param name="definitionId">ID de la definición.</param>
-    /// <param name="cancellationToken">Token de cancellationToken.</param>
     [HttpDelete("{definitionId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete(
-        Guid activityId,
-        Guid definitionId,
-        CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(Guid activityId, Guid definitionId, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _deleteDefinition.ExecuteAsync(userId, activityId, definitionId, cancellationToken);
+        var result = await _sender.Send(new DeleteValueDefinitionCommand(activityId, definitionId, userId), ct);
+        
+        if (result.IsSuccess)
+        {
+            return NoContent();
+        }
+
         return result.ToActionResult();
     }
 }

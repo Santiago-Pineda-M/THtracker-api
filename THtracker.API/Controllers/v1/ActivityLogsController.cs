@@ -1,10 +1,17 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MediatR;
 using THtracker.API.Extensions;
-using THtracker.Application.DTOs.ActivityLogs;
-using THtracker.Application.DTOs.ActivityLogValues;
-using THtracker.Application.UseCases.ActivityLogs;
-using THtracker.Application.UseCases.ActivityLogValues;
+using THtracker.Application.Features.ActivityLogs;
+using THtracker.Application.Features.ActivityLogs.Commands.StartActivity;
+using THtracker.Application.Features.ActivityLogs.Commands.StopActivity;
+using THtracker.Application.Features.ActivityLogs.Commands.UpdateActivityLog;
+using THtracker.Application.Features.ActivityLogs.Queries.GetActivityLogs;
+using THtracker.Application.Features.ActivityLogs.Queries.GetActiveActivityLogs;
+using THtracker.Application.Features.ActivityLogValues;
+using THtracker.Application.Features.ActivityLogValues.Commands.SaveLogValues;
+using THtracker.Application.Features.ActivityLogValues.Queries.GetLogValues;
+using THtracker.Application.Features.ActivityLogs.Queries.GetActivityLogById;
 
 namespace THtracker.API.Controllers.v1;
 
@@ -14,99 +21,66 @@ namespace THtracker.API.Controllers.v1;
 [Authorize]
 [ApiController]
 [Route("activity-logs")]
-public class ActivityLogsController : AuthorizedControllerBase
+public sealed class ActivityLogsController : AuthorizedControllerBase
 {
-    private readonly GetActivityLogsUseCase _getLogs;
-    private readonly GetActiveActivityLogsUseCase _getActiveLogs;
-    private readonly GetActivityLogByIdUseCase _getLogById;
-    private readonly StartActivityUseCase _startActivity;
-    private readonly StopActivityUseCase _stopActivity;
-    private readonly UpdateActivityLogUseCase _updateActivityLog;
-    private readonly SaveLogValuesUseCase _saveValues;
-    private readonly GetLogValuesUseCase _getLogValues;
+    private readonly ISender _sender;
 
-    public ActivityLogsController(
-        GetActivityLogsUseCase getLogs,
-        GetActiveActivityLogsUseCase getActiveLogs,
-        GetActivityLogByIdUseCase getLogById,
-        StartActivityUseCase startActivity,
-        StopActivityUseCase stopActivity,
-        UpdateActivityLogUseCase updateActivityLog,
-        SaveLogValuesUseCase saveValues,
-        GetLogValuesUseCase getLogValues
-    )
+    public ActivityLogsController(ISender sender)
     {
-        _getLogs = getLogs;
-        _getActiveLogs = getActiveLogs;
-        _getLogById = getLogById;
-        _startActivity = startActivity;
-        _stopActivity = stopActivity;
-        _updateActivityLog = updateActivityLog;
-        _saveValues = saveValues;
-        _getLogValues = getLogValues;
+        _sender = sender;
     }
 
     /// <summary>
-    /// Lista los registros de actividad con filtros opcionales (actividad, rango de fechas).
+    /// Lista los registros de actividad con filtros opcionales.
     /// </summary>
-    /// <param name="request">DTO con los parámetros de filtrado.</param>
-    /// <param name="cancellationToken">Token de cancelación.</param>
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<ActivityLogResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(
-        [FromQuery] GetActivityLogsRequest request,
-        CancellationToken cancellationToken
-    )
+        [FromQuery] Guid? activityId,
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to,
+        CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _getLogs.ExecuteAsync(userId, request, cancellationToken);
+        var result = await _sender.Send(new GetActivityLogsQuery(userId, activityId, from, to), ct);
         return result.ToActionResult();
     }
 
     /// <summary>
-    /// Lista los registros de actividad que están en curso (sin fecha de fin).
+    /// Lista los registros de actividad que están en curso.
     /// </summary>
-    /// <param name="cancellationToken">Token de cancelación.</param>
     [HttpGet("active")]
     [ProducesResponseType(typeof(IEnumerable<ActivityLogResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetActive(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetActive(CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _getActiveLogs.ExecuteAsync(userId, cancellationToken);
+        var result = await _sender.Send(new GetActiveActivityLogsQuery(userId), ct);
         return result.ToActionResult();
     }
 
     /// <summary>
     /// Obtiene un registro de actividad por ID.
     /// </summary>
-    /// <param name="id">ID del registro (log).</param>
-    /// <param name="cancellationToken">Token de cancelación.</param>
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(ActivityLogResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _getLogById.ExecuteAsync(userId, id, cancellationToken);
+        var result = await _sender.Send(new GetActivityLogByIdQuery(id, userId), ct);
         return result.ToActionResult();
     }
 
     /// <summary>
     /// Inicia un registro de actividad (crea un nuevo log).
     /// </summary>
-    /// <param name="request">ID de la actividad a registrar.</param>
-    /// <param name="cancellationToken">Token de cancelación.</param>
     [HttpPost("start")]
     [ProducesResponseType(typeof(ActivityLogResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Start(
-        [FromBody] StartActivityLogRequest request,
-        CancellationToken cancellationToken
-    )
+    public async Task<IActionResult> Start([FromBody] StartActivityCommand command, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _startActivity.ExecuteAsync(userId, request, cancellationToken);
+        var result = await _sender.Send(command with { UserId = userId }, ct);
         
         if (result.IsSuccess)
         {
@@ -119,74 +93,53 @@ public class ActivityLogsController : AuthorizedControllerBase
     /// <summary>
     /// Detiene un registro de actividad en curso.
     /// </summary>
-    /// <param name="id">ID del registro (log).</param>
-    /// <param name="cancellationToken">Token de cancelación.</param>
     [HttpPost("{id:guid}/stop")]
     [ProducesResponseType(typeof(ActivityLogResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Stop(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Stop(Guid id, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _stopActivity.ExecuteAsync(userId, id, cancellationToken);
+        var result = await _sender.Send(new StopActivityCommand(id, userId), ct);
         return result.ToActionResult();
     }
 
     /// <summary>
-    /// Actualiza metadatos de un registro de actividad.
+    /// Actualiza un registro de actividad.
     /// </summary>
-    /// <param name="id">ID del registro.</param>
-    /// <param name="request">Datos a actualizar.</param>
-    /// <param name="cancellationToken">Token de cancelación.</param>
     [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(ActivityLogResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Update(
-        Guid id,
-        [FromBody] UpdateActivityLogRequest request,
-        CancellationToken cancellationToken
-    )
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateActivityLogCommand command, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _updateActivityLog.ExecuteAsync(userId, id, request, cancellationToken);
+        var result = await _sender.Send(command with { Id = id, UserId = userId }, ct);
         return result.ToActionResult();
     }
 
     /// <summary>
-    /// Guarda o actualiza valores medidos en un registro (ej. cantidad, notas).
+    /// Guarda los valores personalizados para un registro de actividad.
     /// </summary>
-    /// <param name="id">ID del registro.</param>
-    /// <param name="values">Lista de valores (definitionId + value).</param>
-    /// <param name="cancellationToken">Token de cancelación.</param>
     [HttpPost("{id:guid}/values")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IEnumerable<LogValueResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> AddValues(
-        Guid id,
-        [FromBody] IEnumerable<LogValueRequest> values,
-        CancellationToken cancellationToken
-    )
+    public async Task<IActionResult> SaveValues(Guid id, [FromBody] SaveLogValuesCommand command, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _saveValues.ExecuteAsync(userId, id, values, cancellationToken);
+        var result = await _sender.Send(command with { ActivityLogId = id, UserId = userId }, ct);
         return result.ToActionResult();
     }
 
     /// <summary>
-    /// Obtiene los valores personalizados registrados en un registro de actividad.
+    /// Obtiene los valores personalizados de un registro de actividad.
     /// </summary>
-    /// <param name="id">ID del registro (log).</param>
-    /// <param name="cancellationToken">Token de cancelación.</param>
     [HttpGet("{id:guid}/values")]
     [ProducesResponseType(typeof(IEnumerable<LogValueResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetValues(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetValues(Guid id, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _getLogValues.ExecuteAsync(userId, id, cancellationToken);
+        var result = await _sender.Send(new GetLogValuesQuery(id, userId), ct);
         return result.ToActionResult();
     }
 }

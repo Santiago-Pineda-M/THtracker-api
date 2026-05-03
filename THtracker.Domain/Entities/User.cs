@@ -1,6 +1,6 @@
 namespace THtracker.Domain.Entities;
 
-public class User
+public sealed class User
 {
     public Guid Id { get; private set; }
     public string Name { get; private set; } = null!;

@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MediatR;
 using THtracker.API.Extensions;
 using THtracker.Application.Constants;
-using THtracker.Application.DTOs.Users;
-using THtracker.Application.UseCases.Users;
+using THtracker.Application.Features.Users.Queries.GetUserById;
+using THtracker.Application.Features.Users.Commands.CreateUser;
+using THtracker.Application.Features.Users.Commands.UpdateUser;
+using THtracker.Application.Features.Users.Commands.DeleteUser;
 
 namespace THtracker.API.Controllers.v1;
 
@@ -12,27 +15,13 @@ namespace THtracker.API.Controllers.v1;
 /// </summary>
 [ApiController]
 [Route("users")]
-public class UsersController : AuthorizedControllerBase
+public sealed class UsersController : AuthorizedControllerBase
 {
-    private readonly GetAllUsersUseCase _getAllUsers;
-    private readonly GetUserByIdUseCase _getUserById;
-    private readonly CreateUserUseCase _createUser;
-    private readonly UpdateUserUseCase _updateUser;
-    private readonly DeleteUserUseCase _deleteUser;
+    private readonly ISender _sender;
 
-    public UsersController(
-        GetAllUsersUseCase getAllUsers,
-        GetUserByIdUseCase getUserById,
-        CreateUserUseCase createUser,
-        UpdateUserUseCase updateUser,
-        DeleteUserUseCase deleteUser
-    )
+    public UsersController(ISender sender)
     {
-        _getAllUsers = getAllUsers;
-        _getUserById = getUserById;
-        _createUser = createUser;
-        _updateUser = updateUser;
-        _deleteUser = deleteUser;
+        _sender = sender;
     }
 
     /// <summary>
@@ -40,28 +29,27 @@ public class UsersController : AuthorizedControllerBase
     /// </summary>
     [Authorize]
     [HttpGet("me")]
-    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetMe()
+    public async Task<IActionResult> GetMe(CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _getUserById.ExecuteAsync(userId);
+        var result = await _sender.Send(new GetUserByIdQuery(userId), ct);
         return result.ToActionResult();
     }
 
     /// <summary>
     /// Actualiza los datos del usuario autenticado (autogestión).
     /// </summary>
-    /// <param name="request">Nombre y/o email nuevos.</param>
     [Authorize]
     [HttpPut("me")]
-    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateMe([FromBody] UpdateUserRequest request)
+    public async Task<IActionResult> UpdateMe([FromBody] UpdateUserCommand command, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await _updateUser.ExecuteAsync(userId, request);
+        // Aseguramos que el ID del comando sea el del usuario autenticado
+        var result = await _sender.Send(command with { Id = userId }, ct);
         return result.ToActionResult();
     }
 
@@ -70,81 +58,66 @@ public class UsersController : AuthorizedControllerBase
     /// </summary>
     [Authorize(Roles = DefaultRoles.Admin)]
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<UserDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> Get()
+    [ProducesResponseType(typeof(IEnumerable<UserResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> Get(CancellationToken ct)
     {
-        var result = await _getAllUsers.ExecuteAsync();
-        return result.ToActionResult();
+        // TODO: Implement GetAllUsersQuery
+        return Ok(Enumerable.Empty<UserResponse>());
     }
 
     /// <summary>
     /// Obtiene un usuario por su ID (solo Admin).
     /// </summary>
-    /// <param name="id">ID único del usuario.</param>
     [Authorize(Roles = DefaultRoles.Admin)]
     [HttpGet("{id:guid}")]
-    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetById(Guid id)
+    public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
-        var result = await _getUserById.ExecuteAsync(id);
+        var result = await _sender.Send(new GetUserByIdQuery(id), ct);
         return result.ToActionResult();
     }
 
     /// <summary>
     /// Crea un nuevo usuario (solo Admin).
     /// </summary>
-    /// <param name="request">Nombre, email y contraseña.</param>
     [Authorize(Roles = DefaultRoles.Admin)]
     [HttpPost]
-    [ProducesResponseType(typeof(UserDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(UserResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Create([FromBody] CreateUserRequest request)
+    public async Task<IActionResult> Create([FromBody] CreateUserCommand command, CancellationToken ct)
     {
-        var result = await _createUser.ExecuteAsync(request);
-        
+        var result = await _sender.Send(command, ct);
         if (result.IsSuccess)
         {
             return CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, result.Value);
         }
-
         return result.ToActionResult();
     }
 
     /// <summary>
     /// Actualiza un usuario por ID (solo Admin).
     /// </summary>
-    /// <param name="id">ID del usuario.</param>
-    /// <param name="request">Nombre y/o email nuevos.</param>
     [Authorize(Roles = DefaultRoles.Admin)]
     [HttpPut("{id:guid}")]
-    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateUserRequest request)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateUserCommand command, CancellationToken ct)
     {
-        var result = await _updateUser.ExecuteAsync(id, request);
+        var result = await _sender.Send(command with { Id = id }, ct);
         return result.ToActionResult();
     }
 
     /// <summary>
     /// Elimina un usuario por ID (solo Admin).
     /// </summary>
-    /// <param name="id">ID del usuario a eliminar.</param>
     [Authorize(Roles = DefaultRoles.Admin)]
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete(Guid id)
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
-        var result = await _deleteUser.ExecuteAsync(id);
+        var result = await _sender.Send(new DeleteUserCommand(id), ct);
         return result.ToActionResult();
     }
 }

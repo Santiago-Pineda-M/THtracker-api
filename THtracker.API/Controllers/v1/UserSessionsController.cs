@@ -1,52 +1,50 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MediatR;
 using THtracker.API.Extensions;
-using THtracker.Application.DTOs.Sessions;
-using THtracker.Application.UseCases.Sessions;
+using THtracker.Application.Features.UserSessions;
+using THtracker.Application.Features.UserSessions.Queries.GetUserSessions;
+using THtracker.Application.Features.UserSessions.Commands.RevokeSession;
 
 namespace THtracker.API.Controllers.v1;
 
+[Authorize]
 [ApiController]
 [Route("sessions")]
-public class UserSessionsController : AuthorizedControllerBase
+public sealed class UserSessionsController : AuthorizedControllerBase
 {
-    private readonly GetUserSessionsUseCase getSessions;
-    private readonly RevokeSessionUseCase revokeSession;
-    private readonly LogoutCurrentSessionUseCase logoutCurrentSession;
+    private readonly ISender _sender;
 
-    public UserSessionsController(
-        GetUserSessionsUseCase getSessions,
-        RevokeSessionUseCase revokeSession,
-        LogoutCurrentSessionUseCase logoutCurrentSession
-    )
+    public UserSessionsController(ISender sender)
     {
-        this.getSessions = getSessions;
-        this.revokeSession = revokeSession;
-        this.logoutCurrentSession = logoutCurrentSession;
+        _sender = sender;
     }
 
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<UserSessionResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetMySessions(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetMySessions(CancellationToken ct)
     {
         var userId = GetUserId();
-        var sessions = await this.getSessions.ExecuteAsync(userId, cancellationToken);
-        return Ok(sessions);
+        var result = await _sender.Send(new GetUserSessionsQuery(userId), ct);
+        return result.ToActionResult();
     }
 
-    [HttpPost("{sessionId}/revoke")]
+    [HttpPost("{sessionId:guid}/revoke")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> RevokeSession(
-        Guid sessionId,
-        CancellationToken cancellationToken
-    )
+    public async Task<IActionResult> RevokeSession(Guid sessionId, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await this.revokeSession.ExecuteAsync(userId, sessionId, cancellationToken);
+        var result = await _sender.Send(new RevokeSessionCommand(sessionId, userId), ct);
+        
+        if (result.IsSuccess)
+        {
+            return NoContent();
+        }
+
         return result.ToActionResult();
     }
 
@@ -54,15 +52,11 @@ public class UserSessionsController : AuthorizedControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Logout(CancellationToken cancellationToken)
+    public async Task<IActionResult> Logout(CancellationToken ct)
     {
         var userId = GetUserId();
         var sessionId = GetSessionId();
-        var result = await this.logoutCurrentSession.ExecuteAsync(
-            userId,
-            sessionId,
-            cancellationToken
-        );
+        var result = await _sender.Send(new RevokeSessionCommand(sessionId, userId), ct);
 
         if (result.IsSuccess)
         {

@@ -1,75 +1,58 @@
-namespace THtracker.API.Controllers.v1;
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MediatR;
 using THtracker.API.Extensions;
-using THtracker.Application.DTOs.TaskLists;
-using THtracker.Application.UseCases.TaskLists;
+using THtracker.Application.Features.TaskLists;
+using THtracker.Application.Features.TaskLists.Commands.CreateTaskList;
+using THtracker.Application.Features.TaskLists.Commands.UpdateTaskList;
+using THtracker.Application.Features.TaskLists.Commands.DeleteTaskList;
+using THtracker.Application.Features.TaskLists.Queries.GetAllTaskLists;
+using THtracker.Application.Features.TaskLists.Queries.GetTaskListById;
+
+namespace THtracker.API.Controllers.v1;
 
 [Authorize]
 [ApiController]
 [Route("task-lists")]
-public class TaskListsController : AuthorizedControllerBase
+public sealed class TaskListsController : AuthorizedControllerBase
 {
-    private readonly GetAllTaskListsUseCase getAllTaskLists;
-    private readonly GetTaskListByIdUseCase getTaskListById;
-    private readonly CreateTaskListUseCase createTaskList;
-    private readonly UpdateTaskListUseCase updateTaskList;
-    private readonly DeleteTaskListUseCase deleteTaskList;
+    private readonly ISender _sender;
 
-    public TaskListsController(
-        GetAllTaskListsUseCase getAllTaskLists,
-        GetTaskListByIdUseCase getTaskListById,
-        CreateTaskListUseCase createTaskList,
-        UpdateTaskListUseCase updateTaskList,
-        DeleteTaskListUseCase deleteTaskList
-    )
+    public TaskListsController(ISender sender)
     {
-        this.getAllTaskLists = getAllTaskLists;
-        this.getTaskListById = getTaskListById;
-        this.createTaskList = createTaskList;
-        this.updateTaskList = updateTaskList;
-        this.deleteTaskList = deleteTaskList;
+        _sender = sender;
     }
 
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<TaskListResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAll(CancellationToken ct)
     {
         var userId = GetUserId();
-        var taskLists = await this.getAllTaskLists.ExecuteAsync(userId, cancellationToken);
-        return Ok(taskLists);
+        var result = await _sender.Send(new GetAllTaskListsQuery(userId), ct);
+        return result.ToActionResult();
     }
 
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(TaskListResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await this.getTaskListById.ExecuteAsync(userId, id, cancellationToken);
+        var result = await _sender.Send(new GetTaskListByIdQuery(id, userId), ct);
         return result.ToActionResult();
     }
 
     [HttpPost]
     [ProducesResponseType(typeof(TaskListResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Create(
-        [FromBody] CreateTaskListRequest request,
-        CancellationToken cancellationToken
-    )
+    public async Task<IActionResult> Create([FromBody] CreateTaskListCommand command, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await this.createTaskList.ExecuteAsync(userId, request, cancellationToken);
+        var result = await _sender.Send(command with { UserId = userId }, ct);
 
         if (result.IsSuccess)
         {
-            return CreatedAtAction(
-                nameof(this.GetById),
-                new { id = result.Value.Id },
-                result.Value
-            );
+            return CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, result.Value);
         }
 
         return result.ToActionResult();
@@ -78,28 +61,21 @@ public class TaskListsController : AuthorizedControllerBase
     [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(TaskListResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Update(
-        Guid id,
-        [FromBody] UpdateTaskListRequest request,
-        CancellationToken cancellationToken
-    )
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateTaskListCommand command, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await this
-            .updateTaskList.ExecuteAsync(userId, id, request, cancellationToken);
+        var result = await _sender.Send(command with { Id = id, UserId = userId }, ct);
         return result.ToActionResult();
     }
 
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await this.deleteTaskList.ExecuteAsync(userId, id, cancellationToken);
+        var result = await _sender.Send(new DeleteTaskListCommand(id, userId), ct);
 
         if (result.IsSuccess)
         {

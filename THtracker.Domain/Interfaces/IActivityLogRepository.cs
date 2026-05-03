@@ -20,5 +20,15 @@ public interface IActivityLogRepository
         DateTime? end = null,
         CancellationToken cancellationToken = default
     );
+    Task<IEnumerable<ActivityLog>> GetReportLogsAsync(
+        Guid userId,
+        DateTime start,
+        DateTime end,
+        List<Guid>? categoryIds = null,
+        List<Guid>? activityIds = null,
+        string? searchTerm = null,
+        bool? onlyCompleted = null,
+        CancellationToken cancellationToken = default
+    );
     Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 }

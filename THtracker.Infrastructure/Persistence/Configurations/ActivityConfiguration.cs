@@ -25,5 +25,10 @@ public class ActivityConfiguration : IEntityTypeConfiguration<Activity>
         builder.Property(x => x.AllowOverlap).IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.UpdatedAt).IsRequired();
+
+        // Índices para optimización de reportes y filtrado
+        builder.HasIndex(x => x.UserId);
+        builder.HasIndex(x => x.CategoryId);
+        builder.HasIndex(x => x.Name);
     }
 }

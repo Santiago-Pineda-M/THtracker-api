@@ -18,5 +18,11 @@ public class ActivityLogConfiguration : IEntityTypeConfiguration<ActivityLog>
                
         builder.Property(x => x.StartedAt).IsRequired();
         builder.Property(x => x.EndedAt);
+
+        // Índices para optimización de reportes
+        builder.HasIndex(x => x.ActivityId);
+        builder.HasIndex(x => x.StartedAt);
+        builder.HasIndex(x => x.EndedAt);
+        builder.HasIndex(x => new { x.ActivityId, x.StartedAt });
     }
 }

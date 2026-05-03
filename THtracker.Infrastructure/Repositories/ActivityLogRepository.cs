@@ -117,6 +117,59 @@ public class ActivityLogRepository : IActivityLogRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IEnumerable<ActivityLog>> GetReportLogsAsync(
+        Guid userId,
+        DateTime start,
+        DateTime end,
+        List<Guid>? categoryIds = null,
+        List<Guid>? activityIds = null,
+        string? searchTerm = null,
+        bool? onlyCompleted = null,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var query = _context.ActivityLogs
+            .Include(l => l.LogValues)
+                .ThenInclude(v => v.ValueDefinition)
+            .Join(_context.Activities,
+                log => log.ActivityId,
+                activity => activity.Id,
+                (log, activity) => new { Log = log, Activity = activity })
+            .Where(x => x.Activity.UserId == userId);
+
+        // Filtro de rango de fechas (solapamiento)
+        query = query.Where(x => x.Log.StartedAt < end && (x.Log.EndedAt == null || x.Log.EndedAt > start));
+
+        // Filtro de categorías (múltiples)
+        if (categoryIds != null && categoryIds.Any())
+        {
+            query = query.Where(x => categoryIds.Contains(x.Activity.CategoryId));
+        }
+
+        // Filtro de actividades (múltiples)
+        if (activityIds != null && activityIds.Any())
+        {
+            query = query.Where(x => activityIds.Contains(x.Log.ActivityId));
+        }
+
+        // Búsqueda por término
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            query = query.Where(x => x.Activity.Name.Contains(searchTerm));
+        }
+
+        // Filtro de logs completados
+        if (onlyCompleted.HasValue && onlyCompleted.Value)
+        {
+            query = query.Where(x => x.Log.EndedAt != null);
+        }
+
+        return await query
+            .OrderByDescending(x => x.Log.StartedAt)
+            .Select(x => x.Log)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var log = await _context.ActivityLogs.FindAsync(new object[] { id }, cancellationToken);

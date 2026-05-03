@@ -1,6 +1,6 @@
 namespace THtracker.Domain.Entities;
 
-public class TaskItem
+public sealed class TaskItem
 {
     public Guid Id { get; private set; }
 
@@ -46,7 +46,7 @@ public class TaskItem
         this.UpdatedAt = DateTime.UtcNow;
     }
 
-    public void UpdateContent(string content, DateTime? dueDate)
+    public void Update(string content, DateTime? dueDate)
     {
         this.Content = content;
         this.DueDate = dueDate.HasValue ? DateTime.SpecifyKind(dueDate.Value, DateTimeKind.Utc) : null;

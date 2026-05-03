@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using MediatR;
 using THtracker.API.Extensions;
-using THtracker.Application.DTOs.Auth;
-using THtracker.Application.UseCases.Auth;
+using THtracker.Application.Features.Auth;
+using THtracker.Application.Features.Auth.Login;
+using THtracker.Application.Features.Auth.Register;
+using THtracker.Application.Features.Auth.RefreshToken;
 
 namespace THtracker.API.Controllers.v1;
 
@@ -10,42 +13,27 @@ namespace THtracker.API.Controllers.v1;
 /// </summary>
 [ApiController]
 [Route("auth")]
-public class AuthController : ControllerBase
+[Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("AuthPolicy")]
+public sealed class AuthController : ControllerBase
 {
-    private readonly RegisterUserUseCase _registerUser;
-    private readonly LoginUserUseCase _loginUser;
-    private readonly RefreshTokenUseCase _refreshToken;
-    private readonly SocialLoginUseCase _socialLogin;
+    private readonly ISender _sender;
 
-    public AuthController(
-        RegisterUserUseCase registerUser,
-        LoginUserUseCase loginUser,
-        RefreshTokenUseCase refreshToken,
-        SocialLoginUseCase socialLogin
-    )
+    public AuthController(ISender sender)
     {
-        _registerUser = registerUser;
-        _loginUser = loginUser;
-        _refreshToken = refreshToken;
-        _socialLogin = socialLogin;
+        _sender = sender;
     }
 
     /// <summary>
     /// Registra un nuevo usuario en el sistema.
     /// </summary>
-    /// <param name="request">Datos del registro (nombre, email, contraseña).</param>
-    /// <param name="cancellationToken">Token de cancelación.</param>
-    /// <returns>ID del usuario creado.</returns>
     [HttpPost("register")]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Register(
-        [FromBody] RegisterUserRequest request,
-        CancellationToken cancellationToken
-    )
+        [FromBody] RegisterCommand command,
+        CancellationToken cancellationToken)
     {
-        var result = await _registerUser.ExecuteAsync(request, cancellationToken);
+        var result = await _sender.Send(command, cancellationToken);
         
         if (result.IsSuccess)
         {
@@ -58,65 +46,39 @@ public class AuthController : ControllerBase
     /// <summary>
     /// Inicia sesión y devuelve access token y refresh token.
     /// </summary>
-    /// <param name="request">Email, contraseña e información del dispositivo.</param>
-    /// <param name="cancellationToken">Token de cancelación.</param>
-    /// <returns>Tokens de acceso y refresco con fecha de expiración.</returns>
     [HttpPost("login")]
     [ProducesResponseType(typeof(TokenResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login(
-        [FromBody] LoginRequest request,
-        CancellationToken cancellationToken
-    )
+        [FromBody] LoginCommand command,
+        CancellationToken cancellationToken)
     {
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        var result = await _loginUser.ExecuteAsync(request, ipAddress, cancellationToken);
+        
+        // Inyectamos la IP en el comando antes de enviarlo
+        var result = await _sender.Send(command with { IpAddress = ipAddress }, cancellationToken);
+        
         return result.ToActionResult();
     }
 
     /// <summary>
     /// Renueva el access token usando un refresh token válido.
     /// </summary>
-    /// <param name="request">Objeto con el refresh token.</param>
-    /// <param name="cancellationToken">Token de cancelación.</param>
-    /// <returns>Nuevos access token y refresh token.</returns>
     [HttpPost("refresh")]
     [ProducesResponseType(typeof(TokenResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Refresh(
-        [FromBody] RefreshTokenRequest request,
-        CancellationToken cancellationToken
-    )
+        [FromBody] string refreshToken,
+        CancellationToken cancellationToken)
     {
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        var deviceInfo = Request.Headers["User-Agent"].ToString();
-        var result = await _refreshToken.ExecuteAsync(
-            request.RefreshToken,
-            ipAddress,
-            deviceInfo,
-            cancellationToken
-        );
-        return result.ToActionResult();
-    }
+        var deviceInfo = Request.Headers["User-Agent"].ToString() ?? "unknown";
 
-    /// <summary>
-    /// Autenticación mediante proveedores sociales (Google, Facebook, etc.).
-    /// </summary>
-    /// <param name="request">Token o datos del proveedor social.</param>
-    /// <param name="cancellationToken">Token de cancelación.</param>
-    /// <returns>Tokens de acceso y refresco.</returns>
-    [HttpPost("social-login")]
-    [ProducesResponseType(typeof(TokenResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> SocialLogin(
-        [FromBody] SocialLoginRequest request,
-        CancellationToken cancellationToken
-    )
-    {
-        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        var result = await _socialLogin.ExecuteAsync(request, ipAddress, cancellationToken);
+        var result = await _sender.Send(new RefreshTokenCommand(
+            refreshToken, 
+            ipAddress, 
+            deviceInfo), cancellationToken);
+        
         return result.ToActionResult();
     }
 }
