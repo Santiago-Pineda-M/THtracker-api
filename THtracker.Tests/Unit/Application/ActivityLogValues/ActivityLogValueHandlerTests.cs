@@ -162,15 +162,15 @@ public class ActivityLogValueHandlerTests
             .ReturnsAsync(log);
         _activityRepositoryMock.Setup(x => x.GetByIdAsync(activity.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(activity);
-        _logValueRepositoryMock.Setup(x => x.GetAllByLogAsync(log.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(values);
+        _logValueRepositoryMock.Setup(x => x.GetPageByLogAsync(log.Id, 1, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedList<ActivityLogValue>(values, values.Count));
 
         // Act
         var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().HaveCount(1);
+        result.Value.Items.Should().HaveCount(1);
     }
 
     [Fact]

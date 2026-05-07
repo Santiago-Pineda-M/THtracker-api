@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using THtracker.Domain.Common;
 using THtracker.Domain.Entities;
 using THtracker.Domain.Interfaces;
 using THtracker.Infrastructure.Persistence;
@@ -12,6 +13,38 @@ public class UserSessionRepository : IUserSessionRepository
     public UserSessionRepository(AppDbContext context)
     {
         _context = context;
+    }
+
+    public async Task<PagedList<UserSession>> GetPageByUserAsync(
+        Guid userId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.UserSessions.AsNoTracking().Where(s => s.UserId == userId);
+        var total = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderByDescending(s => s.CreatedAt)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+        return new PagedList<UserSession>(items, total);
+    }
+
+    public async Task<PagedList<UserSession>> GetActivePageByUserAsync(
+        Guid userId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.UserSessions.AsNoTracking().Where(s => s.UserId == userId && s.IsActive);
+        var total = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderByDescending(s => s.CreatedAt)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+        return new PagedList<UserSession>(items, total);
     }
 
     public async Task<IEnumerable<UserSession>> GetAllByUserAsync(

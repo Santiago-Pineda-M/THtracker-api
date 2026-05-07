@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using THtracker.API.Extensions;
+using THtracker.Application.Common;
+using THtracker.Application.Interfaces;
 using THtracker.Application.Features.Activities;
 using THtracker.Application.Features.Activities.Commands.CreateActivity;
 using THtracker.Application.Features.Activities.Commands.UpdateActivity;
@@ -21,7 +23,7 @@ public sealed class ActivitiesController : AuthorizedControllerBase
 {
     private readonly ISender _sender;
 
-    public ActivitiesController(ISender sender)
+    public ActivitiesController(ICurrentUserService currentUser, ISender sender) : base(currentUser)
     {
         _sender = sender;
     }
@@ -30,12 +32,15 @@ public sealed class ActivitiesController : AuthorizedControllerBase
     /// Obtiene todas las actividades del usuario autenticado.
     /// </summary>
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<ActivityResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(PaginatedResponse<ActivityResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = Pagination.DefaultPageSize,
+        CancellationToken cancellationToken = default)
     {
         var userId = GetUserId();
-        var activities = await _sender.Send(new GetAllActivitiesQuery(userId), cancellationToken);
-        return Ok(activities);
+        var result = await _sender.Send(new GetAllActivitiesQuery(userId, pageNumber, pageSize), cancellationToken);
+        return result.ToActionResult();
     }
 
     /// <summary>

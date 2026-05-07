@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using THtracker.API.Extensions;
+using THtracker.Application.Common;
+using THtracker.Application.Interfaces;
 using THtracker.Application.Features.ActivityLogs;
 using THtracker.Application.Features.ActivityLogs.Commands.StartActivity;
 using THtracker.Application.Features.ActivityLogs.Commands.StopActivity;
@@ -25,7 +27,7 @@ public sealed class ActivityLogsController : AuthorizedControllerBase
 {
     private readonly ISender _sender;
 
-    public ActivityLogsController(ISender sender)
+    public ActivityLogsController(ICurrentUserService currentUser, ISender sender) : base(currentUser)
     {
         _sender = sender;
     }
@@ -34,15 +36,17 @@ public sealed class ActivityLogsController : AuthorizedControllerBase
     /// Lista los registros de actividad con filtros opcionales.
     /// </summary>
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<ActivityLogResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PaginatedResponse<ActivityLogResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(
         [FromQuery] Guid? activityId,
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to,
-        CancellationToken ct)
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = Pagination.DefaultPageSize,
+        CancellationToken ct = default)
     {
         var userId = GetUserId();
-        var result = await _sender.Send(new GetActivityLogsQuery(userId, activityId, from, to), ct);
+        var result = await _sender.Send(new GetActivityLogsQuery(userId, activityId, from, to, pageNumber, pageSize), ct);
         return result.ToActionResult();
     }
 
@@ -50,11 +54,14 @@ public sealed class ActivityLogsController : AuthorizedControllerBase
     /// Lista los registros de actividad que están en curso.
     /// </summary>
     [HttpGet("active")]
-    [ProducesResponseType(typeof(IEnumerable<ActivityLogResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetActive(CancellationToken ct)
+    [ProducesResponseType(typeof(PaginatedResponse<ActivityLogResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetActive(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = Pagination.DefaultPageSize,
+        CancellationToken ct = default)
     {
         var userId = GetUserId();
-        var result = await _sender.Send(new GetActiveActivityLogsQuery(userId), ct);
+        var result = await _sender.Send(new GetActiveActivityLogsQuery(userId, pageNumber, pageSize), ct);
         return result.ToActionResult();
     }
 
@@ -134,12 +141,16 @@ public sealed class ActivityLogsController : AuthorizedControllerBase
     /// Obtiene los valores personalizados de un registro de actividad.
     /// </summary>
     [HttpGet("{id:guid}/values")]
-    [ProducesResponseType(typeof(IEnumerable<LogValueResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PaginatedResponse<LogValueResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetValues(Guid id, CancellationToken ct)
+    public async Task<IActionResult> GetValues(
+        Guid id,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = Pagination.DefaultPageSize,
+        CancellationToken ct = default)
     {
         var userId = GetUserId();
-        var result = await _sender.Send(new GetLogValuesQuery(id, userId), ct);
+        var result = await _sender.Send(new GetLogValuesQuery(id, userId, pageNumber, pageSize), ct);
         return result.ToActionResult();
     }
 }

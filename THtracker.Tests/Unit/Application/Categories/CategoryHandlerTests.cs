@@ -164,15 +164,16 @@ public class CategoryHandlerTests
         var query = new GetAllCategoriesQuery(userId);
         var handler = new GetAllCategoriesQueryHandler(_repositoryMock.Object);
 
-        _repositoryMock.Setup(x => x.GetAllByUserAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(categories);
+        _repositoryMock.Setup(x => x.GetPageByUserAsync(userId, 1, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedList<Category>(categories, categories.Count));
 
         // Act
         var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
-        result.Should().HaveCount(2);
-        result.Should().AllSatisfy(c => c.UserId.Should().Be(userId));
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().HaveCount(2);
+        result.Value.Items.Should().AllSatisfy(c => c.UserId.Should().Be(userId));
     }
 
     [Fact]
@@ -182,14 +183,15 @@ public class CategoryHandlerTests
         var query = new GetAllCategoriesQuery(Guid.NewGuid());
         var handler = new GetAllCategoriesQueryHandler(_repositoryMock.Object);
 
-        _repositoryMock.Setup(x => x.GetAllByUserAsync(query.UserId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Enumerable.Empty<Category>());
+        _repositoryMock.Setup(x => x.GetPageByUserAsync(query.UserId, 1, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedList<Category>([], 0));
 
         // Act
         var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
-        result.Should().BeEmpty();
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().BeEmpty();
     }
 
     [Fact]

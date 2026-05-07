@@ -2,11 +2,12 @@ using MediatR;
 using THtracker.Domain.Common;
 using THtracker.Domain.Entities;
 using THtracker.Domain.Interfaces;
+using THtracker.Application.Features.Users.Queries.GetUserById;
 using THtracker.Application.Interfaces;
 
 namespace THtracker.Application.Features.Auth.Register;
 
-public sealed class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result<Guid>>
+public sealed class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result<UserResponse>>
 {
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
@@ -22,11 +23,11 @@ public sealed class RegisterCommandHandler : IRequestHandler<RegisterCommand, Re
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<Result<Guid>> Handle(RegisterCommand request, CancellationToken cancellationToken)
+    public async Task<Result<UserResponse>> Handle(RegisterCommand request, CancellationToken cancellationToken)
     {
         if (await _userRepository.ExistsByEmailAsync(request.Email, cancellationToken))
         {
-            return Result.Failure<Guid>(new Error("Conflict", "El usuario ya existe con este email."));
+            return Result.Failure<UserResponse>(new Error("Conflict", "El usuario ya existe con este email."));
         }
 
         var user = new User(request.Name, request.Email);
@@ -36,6 +37,6 @@ public sealed class RegisterCommandHandler : IRequestHandler<RegisterCommand, Re
         await _userRepository.AddAsync(user, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return user.Id;
+        return new UserResponse(user.Id, user.Name, user.Email);
     }
 }

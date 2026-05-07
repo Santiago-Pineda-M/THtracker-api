@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using THtracker.API.Extensions;
+using THtracker.Application.Common;
 using THtracker.Application.Constants;
 using THtracker.Application.Features.Roles;
 using THtracker.Application.Features.UserRoles.Commands.AddRoleToUser;
@@ -30,10 +31,14 @@ public sealed class UserRolesController : ControllerBase
     /// Obtiene los roles asignados a un usuario.
     /// </summary>
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<RoleResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetRoles(Guid userId, CancellationToken ct)
+    [ProducesResponseType(typeof(PaginatedResponse<RoleResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetRoles(
+        Guid userId,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = Pagination.DefaultPageSize,
+        CancellationToken ct = default)
     {
-        var result = await _sender.Send(new GetUserRolesQuery(userId), ct);
+        var result = await _sender.Send(new GetUserRolesQuery(userId, pageNumber, pageSize), ct);
         return result.ToActionResult();
     }
 

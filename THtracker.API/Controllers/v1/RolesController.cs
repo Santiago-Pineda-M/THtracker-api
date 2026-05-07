@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using THtracker.API.Extensions;
+using THtracker.Application.Common;
 using THtracker.Application.Constants;
 using THtracker.Application.Features.Roles;
 using THtracker.Application.Features.Roles.Commands.CreateRole;
@@ -30,10 +31,13 @@ public sealed class RolesController : ControllerBase
     /// Lista todos los roles.
     /// </summary>
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<RoleResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll(CancellationToken ct)
+    [ProducesResponseType(typeof(PaginatedResponse<RoleResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = Pagination.DefaultPageSize,
+        CancellationToken ct = default)
     {
-        var result = await _sender.Send(new GetAllRolesQuery(), ct);
+        var result = await _sender.Send(new GetAllRolesQuery(pageNumber, pageSize), ct);
         return result.ToActionResult();
     }
 

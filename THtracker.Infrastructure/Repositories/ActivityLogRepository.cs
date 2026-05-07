@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using THtracker.Domain.Common;
 using THtracker.Domain.Entities;
 using THtracker.Domain.Interfaces;
 using THtracker.Infrastructure.Persistence;
@@ -12,6 +13,70 @@ public class ActivityLogRepository : IActivityLogRepository
     public ActivityLogRepository(AppDbContext context)
     {
         _context = context;
+    }
+
+    public async Task<PagedList<ActivityLog>> GetLogsPageForUserAsync(
+        Guid userId,
+        Guid? activityId,
+        DateTime? from,
+        DateTime? to,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var filtered = BuildLogsFilterQuery(userId, activityId, from, to);
+        var total = await filtered.CountAsync(cancellationToken);
+        var items = await filtered
+            .OrderByDescending(log => log.StartedAt)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedList<ActivityLog>(items, total);
+    }
+
+    public async Task<PagedList<ActivityLog>> GetActiveLogsPageForUserAsync(
+        Guid userId,
+        Guid? activityId,
+        DateTime? from,
+        DateTime? to,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var filtered = BuildLogsFilterQuery(userId, activityId, from, to)
+            .Where(log => log.EndedAt == null);
+
+        var total = await filtered.CountAsync(cancellationToken);
+        var items = await filtered
+            .OrderByDescending(log => log.StartedAt)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedList<ActivityLog>(items, total);
+    }
+
+    private IQueryable<ActivityLog> BuildLogsFilterQuery(
+        Guid userId,
+        Guid? activityId,
+        DateTime? from,
+        DateTime? to)
+    {
+        var query = _context.ActivityLogs
+            .AsNoTracking()
+            .Where(log => _context.Activities
+                .AsNoTracking()
+                .Any(activity => activity.Id == log.ActivityId && activity.UserId == userId));
+
+        if (activityId.HasValue)
+            query = query.Where(log => log.ActivityId == activityId.Value);
+        if (from.HasValue)
+            query = query.Where(log => log.StartedAt >= from.Value);
+        if (to.HasValue)
+            query = query.Where(log => log.StartedAt <= to.Value);
+
+        return query;
     }
 
     public async Task<IEnumerable<ActivityLog>> GetAllByActivityAsync(
@@ -41,9 +106,10 @@ public class ActivityLogRepository : IActivityLogRepository
         await _context.ActivityLogs.AddAsync(log, cancellationToken);
     }
 
-    public async Task UpdateAsync(ActivityLog log, CancellationToken cancellationToken = default)
+    public Task UpdateAsync(ActivityLog log, CancellationToken cancellationToken = default)
     {
         _context.ActivityLogs.Update(log);
+        return Task.CompletedTask;
     }
 
     public async Task<IEnumerable<ActivityLog>> GetActiveLogsByUserAsync(Guid userId, CancellationToken cancellationToken = default)

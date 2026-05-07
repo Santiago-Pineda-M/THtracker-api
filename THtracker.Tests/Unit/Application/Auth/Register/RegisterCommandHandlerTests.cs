@@ -43,7 +43,9 @@ public class RegisterCommandHandlerTests
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().NotBeEmpty();
+        result.Value.Id.Should().NotBeEmpty();
+        result.Value.Email.Should().Be(command.Email);
+        result.Value.Name.Should().Be(command.Name);
         _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }

@@ -1,10 +1,12 @@
 using MediatR;
+using THtracker.Application.Common;
+using THtracker.Application.Features.ActivityLogValues;
 using THtracker.Domain.Common;
 using THtracker.Domain.Interfaces;
 
 namespace THtracker.Application.Features.ActivityLogValues.Queries.GetLogValues;
 
-public sealed class GetLogValuesQueryHandler : IRequestHandler<GetLogValuesQuery, Result<IEnumerable<LogValueResponse>>>
+public sealed class GetLogValuesQueryHandler : IRequestHandler<GetLogValuesQuery, Result<PaginatedResponse<LogValueResponse>>>
 {
     private readonly IActivityLogValueRepository _logValueRepository;
     private readonly IActivityLogRepository _logRepository;
@@ -20,25 +22,43 @@ public sealed class GetLogValuesQueryHandler : IRequestHandler<GetLogValuesQuery
         _activityRepository = activityRepository;
     }
 
-    public async Task<Result<IEnumerable<LogValueResponse>>> Handle(GetLogValuesQuery request, CancellationToken cancellationToken)
+    public async Task<Result<PaginatedResponse<LogValueResponse>>> Handle(
+        GetLogValuesQuery request,
+        CancellationToken cancellationToken)
     {
         var log = await _logRepository.GetByIdAsync(request.ActivityLogId, cancellationToken);
         if (log == null)
-            return Result.Failure<IEnumerable<LogValueResponse>>(new Error("NotFound", "El registro de actividad no existe."));
+        {
+            return Result.Failure<PaginatedResponse<LogValueResponse>>(
+                new Error("NotFound", "El registro de actividad no existe."));
+        }
 
         var activity = await _activityRepository.GetByIdAsync(log.ActivityId, cancellationToken);
         if (activity == null || activity.UserId != request.UserId)
-            return Result.Failure<IEnumerable<LogValueResponse>>(new Error("Forbidden", "No tienes acceso a este registro."));
+        {
+            return Result.Failure<PaginatedResponse<LogValueResponse>>(
+                new Error("Forbidden", "No tienes acceso a este registro."));
+        }
 
-        var values = await _logValueRepository.GetAllByLogAsync(request.ActivityLogId, cancellationToken);
-        
-        var response = values.Select(v => new LogValueResponse(
-            v.Id,
-            v.ActivityLogId,
-            v.ValueDefinitionId,
-            v.Value
-        ));
+        var (pageNumber, pageSize) = Pagination.Normalize(request.PageNumber, request.PageSize);
+        var page = await _logValueRepository.GetPageByLogAsync(
+            request.ActivityLogId,
+            pageNumber,
+            pageSize,
+            cancellationToken);
 
-        return Result.Success(response);
+        var items = page.Items
+            .Select(v => new LogValueResponse(
+                v.Id,
+                v.ActivityLogId,
+                v.ValueDefinitionId,
+                v.Value))
+            .ToList();
+
+        return Result.Success(new PaginatedResponse<LogValueResponse>(
+            items,
+            page.TotalCount,
+            pageNumber,
+            pageSize));
     }
 }

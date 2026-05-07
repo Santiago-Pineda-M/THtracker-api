@@ -12,23 +12,28 @@ public sealed class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCom
     private readonly IUserRepository _userRepository;
     private readonly IJwtProvider _jwtProvider;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IClientIpProvider _clientIpProvider;
 
     public RefreshTokenCommandHandler(
         IRefreshTokenRepository refreshTokenRepository,
         IUserSessionRepository sessionRepository,
         IUserRepository userRepository,
         IJwtProvider jwtProvider,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IClientIpProvider clientIpProvider)
     {
         _refreshTokenRepository = refreshTokenRepository;
         _sessionRepository = sessionRepository;
         _userRepository = userRepository;
         _jwtProvider = jwtProvider;
         _unitOfWork = unitOfWork;
+        _clientIpProvider = clientIpProvider;
     }
 
     public async Task<Result<TokenResponse>> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
     {
+        var clientIp = _clientIpProvider.GetClientIpAddress();
+
         // 1. Obtener y validar el Refresh Token actual
         var oldRefreshToken = await _refreshTokenRepository.GetByTokenAsync(request.RefreshToken, cancellationToken);
         
@@ -53,12 +58,12 @@ public sealed class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCom
         }
 
         // 4. Rotar el Refresh Token (Seguridad: un solo uso)
-        oldRefreshToken.Revoke(request.IpAddress, "Reemplazado por nuevo token");
+        oldRefreshToken.Revoke(clientIp, "Reemplazado por nuevo token");
         await _refreshTokenRepository.UpdateAsync(oldRefreshToken, cancellationToken);
 
         var newRefreshTokenEntity = _jwtProvider.GenerateRefreshToken(
             user,
-            request.IpAddress,
+            clientIp,
             request.DeviceInfo
         );
         await _refreshTokenRepository.AddAsync(newRefreshTokenEntity, cancellationToken);
@@ -67,7 +72,7 @@ public sealed class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCom
         session.Refresh(
             newRefreshTokenEntity.Token,
             newRefreshTokenEntity.ExpiryDate,
-            request.IpAddress,
+            clientIp,
             request.DeviceInfo
         );
         await _sessionRepository.UpdateAsync(session, cancellationToken);

@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using THtracker.API.Extensions;
+using THtracker.Application.Common;
+using THtracker.Application.Interfaces;
 using THtracker.Application.Features.UserSessions;
 using THtracker.Application.Features.UserSessions.Queries.GetUserSessions;
 using THtracker.Application.Features.UserSessions.Commands.RevokeSession;
@@ -15,18 +17,21 @@ public sealed class UserSessionsController : AuthorizedControllerBase
 {
     private readonly ISender _sender;
 
-    public UserSessionsController(ISender sender)
+    public UserSessionsController(ICurrentUserService currentUser, ISender sender) : base(currentUser)
     {
         _sender = sender;
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<UserSessionResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PaginatedResponse<UserSessionResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetMySessions(CancellationToken ct)
+    public async Task<IActionResult> GetMySessions(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = Pagination.DefaultPageSize,
+        CancellationToken ct = default)
     {
         var userId = GetUserId();
-        var result = await _sender.Send(new GetUserSessionsQuery(userId), ct);
+        var result = await _sender.Send(new GetUserSessionsQuery(userId, pageNumber, pageSize), ct);
         return result.ToActionResult();
     }
 

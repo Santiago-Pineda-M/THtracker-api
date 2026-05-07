@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using THtracker.Domain.Common;
 using THtracker.Domain.Entities;
 using THtracker.Domain.Interfaces;
 using THtracker.Infrastructure.Persistence;
@@ -12,6 +13,22 @@ public class CategoryRepository : ICategoryRepository
     public CategoryRepository(AppDbContext context)
     {
         _context = context;
+    }
+
+    public async Task<PagedList<Category>> GetPageByUserAsync(
+        Guid userId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Categories.AsNoTracking().Where(c => c.UserId == userId);
+        var total = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderBy(c => c.Name)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+        return new PagedList<Category>(items, total);
     }
 
     public async Task<IEnumerable<Category>> GetAllByUserAsync(

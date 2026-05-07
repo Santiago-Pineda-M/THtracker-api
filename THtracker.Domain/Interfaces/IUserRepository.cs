@@ -1,9 +1,15 @@
+using THtracker.Domain.Common;
 using THtracker.Domain.Entities;
 
 namespace THtracker.Domain.Interfaces;
 
 public interface IUserRepository
 {
+    Task<PagedList<User>> GetPageAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
     Task<IEnumerable<User>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);

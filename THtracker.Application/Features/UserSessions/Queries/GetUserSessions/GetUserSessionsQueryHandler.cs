@@ -1,10 +1,11 @@
 using MediatR;
+using THtracker.Application.Common;
 using THtracker.Domain.Common;
 using THtracker.Domain.Interfaces;
 
 namespace THtracker.Application.Features.UserSessions.Queries.GetUserSessions;
 
-public sealed class GetUserSessionsQueryHandler : IRequestHandler<GetUserSessionsQuery, Result<IEnumerable<UserSessionResponse>>>
+public sealed class GetUserSessionsQueryHandler : IRequestHandler<GetUserSessionsQuery, Result<PaginatedResponse<UserSessionResponse>>>
 {
     private readonly IUserSessionRepository _sessionRepository;
 
@@ -13,20 +14,32 @@ public sealed class GetUserSessionsQueryHandler : IRequestHandler<GetUserSession
         _sessionRepository = sessionRepository;
     }
 
-    public async Task<Result<IEnumerable<UserSessionResponse>>> Handle(GetUserSessionsQuery request, CancellationToken cancellationToken)
+    public async Task<Result<PaginatedResponse<UserSessionResponse>>> Handle(
+        GetUserSessionsQuery request,
+        CancellationToken cancellationToken)
     {
-        var sessions = await _sessionRepository.GetActiveByUserAsync(request.UserId, cancellationToken);
-        
-        var response = sessions.Select(s => new UserSessionResponse(
-            s.Id,
-            s.DeviceInfo,
-            s.IpAddress,
-            s.Location,
-            s.CreatedAt,
-            s.ExpiresAt,
-            s.IsActive
-        ));
+        var (pageNumber, pageSize) = Pagination.Normalize(request.PageNumber, request.PageSize);
+        var page = await _sessionRepository.GetActivePageByUserAsync(
+            request.UserId,
+            pageNumber,
+            pageSize,
+            cancellationToken);
 
-        return Result.Success(response);
+        var items = page.Items
+            .Select(s => new UserSessionResponse(
+                s.Id,
+                s.DeviceInfo,
+                s.IpAddress,
+                s.Location,
+                s.CreatedAt,
+                s.ExpiresAt,
+                s.IsActive))
+            .ToList();
+
+        return Result.Success(new PaginatedResponse<UserSessionResponse>(
+            items,
+            page.TotalCount,
+            pageNumber,
+            pageSize));
     }
 }

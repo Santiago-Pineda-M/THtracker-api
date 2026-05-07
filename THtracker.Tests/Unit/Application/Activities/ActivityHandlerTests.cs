@@ -225,15 +225,16 @@ public class ActivityHandlerTests
         var query = new GetAllActivitiesQuery(userId);
         var handler = new GetAllActivitiesQueryHandler(_activityRepositoryMock.Object);
 
-        _activityRepositoryMock.Setup(x => x.GetAllByUserAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(activities);
+        _activityRepositoryMock.Setup(x => x.GetPageByUserAsync(userId, 1, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedList<Activity>(activities, activities.Count));
 
         // Act
         var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
-        result.Should().HaveCount(2);
-        result.Should().AllSatisfy(a => a.UserId.Should().Be(userId));
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().HaveCount(2);
+        result.Value.Items.Should().AllSatisfy(a => a.UserId.Should().Be(userId));
     }
 
     [Fact]
@@ -243,14 +244,15 @@ public class ActivityHandlerTests
         var query = new GetAllActivitiesQuery(Guid.NewGuid());
         var handler = new GetAllActivitiesQueryHandler(_activityRepositoryMock.Object);
 
-        _activityRepositoryMock.Setup(x => x.GetAllByUserAsync(query.UserId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Enumerable.Empty<Activity>());
+        _activityRepositoryMock.Setup(x => x.GetPageByUserAsync(query.UserId, 1, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedList<Activity>([], 0));
 
         // Act
         var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
-        result.Should().BeEmpty();
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().BeEmpty();
     }
 
     [Fact]

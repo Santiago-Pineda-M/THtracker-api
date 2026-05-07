@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using THtracker.API.Extensions;
+using THtracker.Application.Common;
+using THtracker.Application.Interfaces;
 using THtracker.Application.Features.TaskLists;
 using THtracker.Application.Features.TaskLists.Commands.CreateTaskList;
 using THtracker.Application.Features.TaskLists.Commands.UpdateTaskList;
@@ -18,17 +20,20 @@ public sealed class TaskListsController : AuthorizedControllerBase
 {
     private readonly ISender _sender;
 
-    public TaskListsController(ISender sender)
+    public TaskListsController(ICurrentUserService currentUser, ISender sender) : base(currentUser)
     {
         _sender = sender;
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<TaskListResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll(CancellationToken ct)
+    [ProducesResponseType(typeof(PaginatedResponse<TaskListResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = Pagination.DefaultPageSize,
+        CancellationToken ct = default)
     {
         var userId = GetUserId();
-        var result = await _sender.Send(new GetAllTaskListsQuery(userId), ct);
+        var result = await _sender.Send(new GetAllTaskListsQuery(userId, pageNumber, pageSize), ct);
         return result.ToActionResult();
     }
 

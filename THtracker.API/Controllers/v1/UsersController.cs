@@ -2,8 +2,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using THtracker.API.Extensions;
+using THtracker.Application.Common;
 using THtracker.Application.Constants;
+using THtracker.Application.Interfaces;
 using THtracker.Application.Features.Users.Queries.GetUserById;
+using THtracker.Application.Features.Users.Queries.GetAllUsers;
 using THtracker.Application.Features.Users.Commands.CreateUser;
 using THtracker.Application.Features.Users.Commands.UpdateUser;
 using THtracker.Application.Features.Users.Commands.DeleteUser;
@@ -19,7 +22,7 @@ public sealed class UsersController : AuthorizedControllerBase
 {
     private readonly ISender _sender;
 
-    public UsersController(ISender sender)
+    public UsersController(ICurrentUserService currentUser, ISender sender) : base(currentUser)
     {
         _sender = sender;
     }
@@ -58,11 +61,14 @@ public sealed class UsersController : AuthorizedControllerBase
     /// </summary>
     [Authorize(Roles = DefaultRoles.Admin)]
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<UserResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> Get(CancellationToken ct)
+    [ProducesResponseType(typeof(PaginatedResponse<UserResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> Get(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = THtracker.Application.Common.Pagination.DefaultPageSize,
+        CancellationToken ct = default)
     {
-        // TODO: Implement GetAllUsersQuery
-        return Ok(Enumerable.Empty<UserResponse>());
+        var result = await _sender.Send(new GetAllUsersQuery(pageNumber, pageSize), ct);
+        return result.ToActionResult();
     }
 
     /// <summary>

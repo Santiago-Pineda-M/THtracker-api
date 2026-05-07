@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using THtracker.Application.Constants;
 using THtracker.Application.Interfaces;
+using THtracker.Domain.Common;
 using THtracker.Domain.Entities;
 using THtracker.Domain.Interfaces;
 
@@ -58,6 +59,17 @@ public class InMemoryUserRepository : IUserRepository
 
     public Task<IEnumerable<User>> GetAllAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult(_users.AsEnumerable());
+
+    public Task<PagedList<User>> GetPageAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var ordered = _users.OrderBy(u => u.Email).ToList();
+        var total = ordered.Count;
+        var items = ordered.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+        return Task.FromResult(new PagedList<User>(items, total));
+    }
 
     public Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         Task.FromResult(_users.FirstOrDefault(u => u.Id == id));
@@ -269,6 +281,29 @@ public class InMemoryUserRoleRepository : IUserRoleRepository
 public class InMemoryActivityLogRepository : IActivityLogRepository
 {
     private readonly Dictionary<Guid, ActivityLog> _logs = new();
+
+    public Task<PagedList<ActivityLog>> GetLogsPageForUserAsync(
+        Guid userId,
+        Guid? activityId,
+        DateTime? from,
+        DateTime? to,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _logs.Values.AsEnumerable();
+        if (activityId.HasValue)
+            query = query.Where(l => l.ActivityId == activityId.Value);
+        if (from.HasValue)
+            query = query.Where(l => l.StartedAt >= from.Value);
+        if (to.HasValue)
+            query = query.Where(l => l.StartedAt <= to.Value);
+
+        var ordered = query.OrderByDescending(l => l.StartedAt).ToList();
+        var total = ordered.Count;
+        var items = ordered.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+        return Task.FromResult(new PagedList<ActivityLog>(items, total));
+    }
 
     public Task<IEnumerable<ActivityLog>> GetAllByActivityAsync(
         Guid activityId,

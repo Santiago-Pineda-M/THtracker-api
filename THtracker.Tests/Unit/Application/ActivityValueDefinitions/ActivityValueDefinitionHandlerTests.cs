@@ -148,15 +148,15 @@ public class ActivityValueDefinitionHandlerTests
 
         _activityRepositoryMock.Setup(x => x.GetByIdAsync(activity.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(activity);
-        _definitionRepositoryMock.Setup(x => x.GetAllByActivityAsync(activity.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(definitions);
+        _definitionRepositoryMock.Setup(x => x.GetPageByActivityAsync(activity.Id, 1, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedList<ActivityValueDefinition>(definitions, definitions.Count));
 
         // Act
         var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().HaveCount(1);
+        result.Value.Items.Should().HaveCount(1);
     }
 
     [Fact]

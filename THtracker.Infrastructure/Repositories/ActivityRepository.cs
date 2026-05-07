@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using THtracker.Domain.Common;
 using THtracker.Domain.Entities;
 using THtracker.Domain.Interfaces;
 using THtracker.Infrastructure.Persistence;
@@ -12,6 +13,22 @@ public class ActivityRepository : IActivityRepository
     public ActivityRepository(AppDbContext context)
     {
         _context = context;
+    }
+
+    public async Task<PagedList<Activity>> GetPageByUserAsync(
+        Guid userId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Activities.AsNoTracking().Where(a => a.UserId == userId);
+        var total = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderBy(a => a.Name)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+        return new PagedList<Activity>(items, total);
     }
 
     public async Task<IEnumerable<Activity>> GetAllByUserAsync(

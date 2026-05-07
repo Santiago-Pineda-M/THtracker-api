@@ -1,11 +1,12 @@
 using MediatR;
+using THtracker.Application.Common;
+using THtracker.Application.Features.Roles;
 using THtracker.Domain.Common;
 using THtracker.Domain.Interfaces;
-using THtracker.Application.Features.Roles;
 
 namespace THtracker.Application.Features.UserRoles.Queries.GetUserRoles;
 
-public sealed class GetUserRolesQueryHandler : IRequestHandler<GetUserRolesQuery, Result<IEnumerable<RoleResponse>>>
+public sealed class GetUserRolesQueryHandler : IRequestHandler<GetUserRolesQuery, Result<PaginatedResponse<RoleResponse>>>
 {
     private readonly IUserRoleRepository _userRoleRepository;
 
@@ -14,12 +15,25 @@ public sealed class GetUserRolesQueryHandler : IRequestHandler<GetUserRolesQuery
         _userRoleRepository = userRoleRepository;
     }
 
-    public async Task<Result<IEnumerable<RoleResponse>>> Handle(GetUserRolesQuery request, CancellationToken cancellationToken)
+    public async Task<Result<PaginatedResponse<RoleResponse>>> Handle(
+        GetUserRolesQuery request,
+        CancellationToken cancellationToken)
     {
-        var roles = await _userRoleRepository.GetRolesByUserAsync(request.UserId, cancellationToken);
-        
-        var response = roles.Select(r => new RoleResponse(r.Id, r.Name));
+        var (pageNumber, pageSize) = Pagination.Normalize(request.PageNumber, request.PageSize);
+        var page = await _userRoleRepository.GetRolesPageByUserAsync(
+            request.UserId,
+            pageNumber,
+            pageSize,
+            cancellationToken);
 
-        return Result.Success(response);
+        var items = page.Items
+            .Select(r => new RoleResponse(r.Id, r.Name))
+            .ToList();
+
+        return Result.Success(new PaginatedResponse<RoleResponse>(
+            items,
+            page.TotalCount,
+            pageNumber,
+            pageSize));
     }
 }

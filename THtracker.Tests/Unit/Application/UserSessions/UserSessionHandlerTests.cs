@@ -109,14 +109,14 @@ public class UserSessionHandlerTests
         var query = new GetUserSessionsQuery(userId);
         var handler = new GetUserSessionsQueryHandler(_sessionRepositoryMock.Object);
 
-        _sessionRepositoryMock.Setup(x => x.GetActiveByUserAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(sessions);
+        _sessionRepositoryMock.Setup(x => x.GetActivePageByUserAsync(userId, 1, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedList<UserSession>(sessions, sessions.Count));
 
         // Act
         var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().HaveCount(1);
+        result.Value.Items.Should().HaveCount(1);
     }
 }

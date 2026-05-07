@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using THtracker.API.Extensions;
+using THtracker.Application.Common;
+using THtracker.Application.Interfaces;
 using THtracker.Application.Features.Categories;
 using THtracker.Application.Features.Categories.Commands.CreateCategory;
 using THtracker.Application.Features.Categories.Commands.UpdateCategory;
@@ -21,7 +23,7 @@ public sealed class CategoriesController : AuthorizedControllerBase
 {
     private readonly ISender _sender;
 
-    public CategoriesController(ISender sender)
+    public CategoriesController(ICurrentUserService currentUser, ISender sender) : base(currentUser)
     {
         _sender = sender;
     }
@@ -30,12 +32,15 @@ public sealed class CategoriesController : AuthorizedControllerBase
     /// Obtiene todas las categorías del usuario autenticado.
     /// </summary>
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<CategoryResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(PaginatedResponse<CategoryResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = Pagination.DefaultPageSize,
+        CancellationToken cancellationToken = default)
     {
         var userId = GetUserId();
-        var categories = await _sender.Send(new GetAllCategoriesQuery(userId), cancellationToken);
-        return Ok(categories);
+        var result = await _sender.Send(new GetAllCategoriesQuery(userId, pageNumber, pageSize), cancellationToken);
+        return result.ToActionResult();
     }
 
     /// <summary>

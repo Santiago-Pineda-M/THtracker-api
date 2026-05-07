@@ -1,9 +1,28 @@
+using THtracker.Domain.Common;
 using THtracker.Domain.Entities;
 
 namespace THtracker.Domain.Interfaces;
 
 public interface IActivityLogRepository
 {
+    Task<PagedList<ActivityLog>> GetLogsPageForUserAsync(
+        Guid userId,
+        Guid? activityId,
+        DateTime? from,
+        DateTime? to,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
+    Task<PagedList<ActivityLog>> GetActiveLogsPageForUserAsync(
+        Guid userId,
+        Guid? activityId,
+        DateTime? from,
+        DateTime? to,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
     Task<IEnumerable<ActivityLog>> GetAllByActivityAsync(
         Guid activityId,
         CancellationToken cancellationToken = default

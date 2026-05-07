@@ -5,6 +5,7 @@ using THtracker.Application.Features.Auth;
 using THtracker.Application.Features.Auth.Login;
 using THtracker.Application.Features.Auth.Register;
 using THtracker.Application.Features.Auth.RefreshToken;
+using THtracker.Application.Features.Users.Queries.GetUserById;
 
 namespace THtracker.API.Controllers.v1;
 
@@ -27,17 +28,21 @@ public sealed class AuthController : ControllerBase
     /// Registra un nuevo usuario en el sistema.
     /// </summary>
     [HttpPost("register")]
-    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(UserResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Register(
         [FromBody] RegisterCommand command,
         CancellationToken cancellationToken)
     {
         var result = await _sender.Send(command, cancellationToken);
-        
+
         if (result.IsSuccess)
         {
-            return Ok(new { UserId = result.Value });
+            return CreatedAtAction(
+                nameof(UsersController.GetById),
+                nameof(UsersController).Replace("Controller", string.Empty),
+                new { id = result.Value.Id },
+                result.Value);
         }
 
         return result.ToActionResult();
@@ -53,11 +58,7 @@ public sealed class AuthController : ControllerBase
         [FromBody] LoginCommand command,
         CancellationToken cancellationToken)
     {
-        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        
-        // Inyectamos la IP en el comando antes de enviarlo
-        var result = await _sender.Send(command with { IpAddress = ipAddress }, cancellationToken);
-        
+        var result = await _sender.Send(command, cancellationToken);
         return result.ToActionResult();
     }
 
@@ -68,17 +69,14 @@ public sealed class AuthController : ControllerBase
     [ProducesResponseType(typeof(TokenResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Refresh(
-        [FromBody] string refreshToken,
+        [FromBody] SubmitRefreshToken body,
         CancellationToken cancellationToken)
     {
-        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         var deviceInfo = Request.Headers["User-Agent"].ToString() ?? "unknown";
 
-        var result = await _sender.Send(new RefreshTokenCommand(
-            refreshToken, 
-            ipAddress, 
-            deviceInfo), cancellationToken);
-        
+        var result = await _sender.Send(
+            new RefreshTokenCommand(body.RefreshToken, deviceInfo),
+            cancellationToken);
         return result.ToActionResult();
     }
 }

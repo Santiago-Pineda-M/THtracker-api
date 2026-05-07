@@ -1,49 +1,45 @@
 using MediatR;
+using THtracker.Application.Common;
 using THtracker.Domain.Common;
 using THtracker.Domain.Interfaces;
 
 namespace THtracker.Application.Features.ActivityLogs.Queries.GetActivityLogs;
 
-public sealed class GetActivityLogsQueryHandler : IRequestHandler<GetActivityLogsQuery, Result<IEnumerable<ActivityLogResponse>>>
+public sealed class GetActivityLogsQueryHandler : IRequestHandler<GetActivityLogsQuery, Result<PaginatedResponse<ActivityLogResponse>>>
 {
     private readonly IActivityLogRepository _logRepository;
-    private readonly IActivityRepository _activityRepository;
 
-    public GetActivityLogsQueryHandler(
-        IActivityLogRepository logRepository, 
-        IActivityRepository activityRepository)
+    public GetActivityLogsQueryHandler(IActivityLogRepository logRepository)
     {
         _logRepository = logRepository;
-        _activityRepository = activityRepository;
     }
 
-    public async Task<Result<IEnumerable<ActivityLogResponse>>> Handle(GetActivityLogsQuery request, CancellationToken cancellationToken)
+    public async Task<Result<PaginatedResponse<ActivityLogResponse>>> Handle(
+        GetActivityLogsQuery request,
+        CancellationToken cancellationToken)
     {
-        var logs = await _logRepository.GetActiveLogsByUserAsync(request.UserId, cancellationToken);
+        var (pageNumber, pageSize) = Pagination.Normalize(request.PageNumber, request.PageSize);
+        var page = await _logRepository.GetLogsPageForUserAsync(
+            request.UserId,
+            request.ActivityId,
+            request.From,
+            request.To,
+            pageNumber,
+            pageSize,
+            cancellationToken);
 
-        var filteredLogs = logs.AsEnumerable();
+        var items = page.Items
+            .Select(l => new ActivityLogResponse(
+                l.Id,
+                l.ActivityId,
+                l.StartedAt,
+                l.EndedAt))
+            .ToList();
 
-        if (request.ActivityId.HasValue)
-        {
-            filteredLogs = filteredLogs.Where(l => l.ActivityId == request.ActivityId.Value);
-        }
-
-        if (request.From.HasValue)
-        {
-            filteredLogs = filteredLogs.Where(l => l.StartedAt >= request.From.Value);
-        }
-
-        if (request.To.HasValue)
-        {
-            filteredLogs = filteredLogs.Where(l => l.StartedAt <= request.To.Value);
-        }
-
-        var response = filteredLogs.Select(l => new ActivityLogResponse(
-            l.Id, 
-            l.ActivityId, 
-            l.StartedAt, 
-            l.EndedAt));
-
-        return Result.Success(response);
+        return Result.Success(new PaginatedResponse<ActivityLogResponse>(
+            items,
+            page.TotalCount,
+            pageNumber,
+            pageSize));
     }
 }

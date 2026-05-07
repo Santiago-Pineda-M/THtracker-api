@@ -253,15 +253,22 @@ public class ActivityLogHandlerTests
         var query = new GetActiveActivityLogsQuery(userId);
         var handler = new GetActiveActivityLogsQueryHandler(_logRepositoryMock.Object);
 
-        _logRepositoryMock.Setup(x => x.GetActiveLogsByUserAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(logs);
+        _logRepositoryMock.Setup(x => x.GetActiveLogsPageForUserAsync(
+                userId,
+                null,
+                null,
+                null,
+                1,
+                20,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedList<ActivityLog>(logs, logs.Count));
 
         // Act
         var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().HaveCount(1);
+        result.Value.Items.Should().HaveCount(1);
     }
 
     [Fact]
@@ -322,19 +329,24 @@ public class ActivityLogHandlerTests
             new ActivityLog(Guid.NewGuid(), DateTime.UtcNow.AddHours(-1)) // Otro activityId
         };
         var query = new GetActivityLogsQuery(userId, activityId, null, null);
-        var handler = new GetActivityLogsQueryHandler(_logRepositoryMock.Object, _activityRepositoryMock.Object);
-
-        // IMPORTANTE: El handler actual llama a GetActiveLogsByUserAsync para esta query. Parece haber un bug en el query handler en produccion si es para historial general. 
-        // Vamos a mockear la respuesta del repositorio a como está escrito el handler.
-        _logRepositoryMock.Setup(x => x.GetActiveLogsByUserAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(logs);
+        var handler = new GetActivityLogsQueryHandler(_logRepositoryMock.Object);
+        var filtered = new List<ActivityLog> { logs[0] };
+        _logRepositoryMock.Setup(x => x.GetLogsPageForUserAsync(
+                userId,
+                activityId,
+                null,
+                null,
+                1,
+                20,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedList<ActivityLog>(filtered, filtered.Count));
 
         // Act
         var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().HaveCount(1); // Debería filtrar por el ActivityId
-        result.Value.First().ActivityId.Should().Be(activityId);
+        result.Value.Items.Should().HaveCount(1);
+        result.Value.Items[0].ActivityId.Should().Be(activityId);
     }
 }

@@ -1,6 +1,7 @@
 using System.Text;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
@@ -28,13 +29,29 @@ builder.Services.AddControllers(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerDocumentation();
 
+builder.Services.AddHsts(options =>
+{
+    options.MaxAge = TimeSpan.FromDays(365);
+    options.IncludeSubDomains = true;
+});
+
 // CORS
 var corsOrigins = builder.Configuration["CORS_ALLOWED_ORIGINS"] ?? "http://localhost:5173";
-var allowedOrigins = corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries);
+var allowedOrigins = corsOrigins.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()
+        policy
+            .WithOrigins(allowedOrigins)
+            .WithMethods(
+                HttpMethods.Get,
+                HttpMethods.Post,
+                HttpMethods.Put,
+                HttpMethods.Patch,
+                HttpMethods.Delete,
+                HttpMethods.Options)
+            .WithHeaders("Content-Type", "Authorization", "Accept", "X-Requested-With")
+            .AllowCredentials()
     );
 });
 
@@ -70,6 +87,7 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
+builder.Services.AddPresentationServices();
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
@@ -92,8 +110,13 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwaggerDocumentation();
 }
+else
+{
+    app.UseHsts();
+}
 
 app.UseHttpsRedirection();
+app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseRateLimiter();
 app.UseCors();
 app.UseAuthentication();

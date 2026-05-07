@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using THtracker.Domain.Common;
 using THtracker.Domain.Entities;
 using THtracker.Domain.Interfaces;
 using THtracker.Infrastructure.Persistence;
@@ -12,6 +13,22 @@ public class ActivityValueDefinitionRepository : IActivityValueDefinitionReposit
     public ActivityValueDefinitionRepository(AppDbContext context)
     {
         _context = context;
+    }
+
+    public async Task<PagedList<ActivityValueDefinition>> GetPageByActivityAsync(
+        Guid activityId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.ActivityValueDefinitions.AsNoTracking().Where(v => v.ActivityId == activityId);
+        var total = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderBy(v => v.Name)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+        return new PagedList<ActivityValueDefinition>(items, total);
     }
 
     public async Task<IEnumerable<ActivityValueDefinition>> GetAllByActivityAsync(

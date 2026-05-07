@@ -16,6 +16,7 @@ public class RefreshTokenCommandHandlerTests
     private readonly Mock<IUserRepository> _userRepositoryMock;
     private readonly Mock<IJwtProvider> _jwtProviderMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+    private readonly Mock<IClientIpProvider> _clientIpProviderMock;
     private readonly RefreshTokenCommandHandler _handler;
 
     public RefreshTokenCommandHandlerTests()
@@ -25,27 +26,30 @@ public class RefreshTokenCommandHandlerTests
         _userRepositoryMock = new Mock<IUserRepository>();
         _jwtProviderMock = new Mock<IJwtProvider>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _clientIpProviderMock = new Mock<IClientIpProvider>();
+        _clientIpProviderMock.Setup(x => x.GetClientIpAddress()).Returns("127.0.0.1");
 
         _handler = new RefreshTokenCommandHandler(
             _refreshTokenRepositoryMock.Object,
             _sessionRepositoryMock.Object,
             _userRepositoryMock.Object,
             _jwtProviderMock.Object,
-            _unitOfWorkMock.Object);
+            _unitOfWorkMock.Object,
+            _clientIpProviderMock.Object);
     }
 
     [Fact]
     public async Task Handle_ShouldReturnNewTokens_WhenRefreshTokenIsValid()
     {
         // Arrange
-        var command = new RefreshTokenCommand("valid_old_token", "127.0.0.1", "Chrome");
+        var command = new RefreshTokenCommand("valid_old_token", "Chrome");
         var userId = Guid.NewGuid();
         var user = new User("Test User", "test@example.com");
         
         var oldRefreshToken = new THtracker.Domain.Entities.RefreshToken(command.RefreshToken, DateTime.UtcNow.AddDays(1), "127.0.0.1", "Chrome", userId);
         var session = new UserSession(userId, command.RefreshToken, oldRefreshToken.ExpiryDate, "Chrome", "127.0.0.1");
         
-        var newRefreshToken = new THtracker.Domain.Entities.RefreshToken("new_token", DateTime.UtcNow.AddDays(7), command.IpAddress, command.DeviceInfo, userId);
+        var newRefreshToken = new THtracker.Domain.Entities.RefreshToken("new_token", DateTime.UtcNow.AddDays(7), "127.0.0.1", command.DeviceInfo, userId);
 
         _refreshTokenRepositoryMock.Setup(x => x.GetByTokenAsync(command.RefreshToken, It.IsAny<CancellationToken>()))
             .ReturnsAsync(oldRefreshToken);
@@ -56,7 +60,7 @@ public class RefreshTokenCommandHandlerTests
         _userRepositoryMock.Setup(x => x.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
-        _jwtProviderMock.Setup(x => x.GenerateRefreshToken(user, command.IpAddress, command.DeviceInfo))
+        _jwtProviderMock.Setup(x => x.GenerateRefreshToken(user, "127.0.0.1", command.DeviceInfo))
             .Returns(newRefreshToken);
 
         _jwtProviderMock.Setup(x => x.GenerateAccessToken(user, session.Id))
@@ -86,7 +90,7 @@ public class RefreshTokenCommandHandlerTests
     public async Task Handle_ShouldReturnFailure_WhenTokenIsExpired()
     {
         // Arrange
-        var command = new RefreshTokenCommand("expired_token", "127.0.0.1", "Chrome");
+        var command = new RefreshTokenCommand("expired_token", "Chrome");
         // Creamos un token que expira en el pasado
         var oldRefreshToken = new THtracker.Domain.Entities.RefreshToken(command.RefreshToken, DateTime.UtcNow.AddDays(-1), "127.0.0.1", "Chrome", Guid.NewGuid());
 

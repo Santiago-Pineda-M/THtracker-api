@@ -2,21 +2,17 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using THtracker.Application.Interfaces;
 using THtracker.Domain.Entities;
+using THtracker.Infrastructure.Options;
 
 namespace THtracker.Infrastructure.Services;
 
-public class JwtProvider : IJwtProvider
+public sealed class JwtProvider(IOptions<JwtOptions> jwtOptions) : IJwtProvider
 {
-    private readonly IConfiguration _configuration;
-
-    public JwtProvider(IConfiguration configuration)
-    {
-        _configuration = configuration;
-    }
+    private readonly JwtOptions _jwt = jwtOptions.Value;
 
     public string GenerateAccessToken(User user, Guid sessionId)
     {
@@ -37,14 +33,14 @@ public class JwtProvider : IJwtProvider
             }
         }
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:SecretKey"]!));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.SecretKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            issuer: _configuration["Jwt:Issuer"],
-            audience: _configuration["Jwt:Audience"],
+            issuer: _jwt.Issuer,
+            audience: _jwt.Audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(double.Parse(_configuration["Jwt:AccessTokenExpirationMinutes"]!)),
+            expires: DateTime.UtcNow.AddMinutes(_jwt.AccessTokenExpirationMinutes),
             signingCredentials: creds
         );
 
@@ -58,7 +54,7 @@ public class JwtProvider : IJwtProvider
         rng.GetBytes(randomNumber);
         string token = Convert.ToBase64String(randomNumber);
 
-        var expiry = DateTime.UtcNow.AddDays(double.Parse(_configuration["Jwt:RefreshTokenExpirationDays"]!));
+        var expiry = DateTime.UtcNow.AddDays(_jwt.RefreshTokenExpirationDays);
 
         return new RefreshToken(token, expiry, ipAddress, deviceInfo, user.Id);
     }

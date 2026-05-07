@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using THtracker.API.Extensions;
+using THtracker.Application.Common;
+using THtracker.Application.Interfaces;
 using THtracker.Application.Features.ActivityValueDefinitions;
 using THtracker.Application.Features.ActivityValueDefinitions.Commands.CreateValueDefinition;
 using THtracker.Application.Features.ActivityValueDefinitions.Commands.UpdateValueDefinition;
@@ -21,7 +23,7 @@ public sealed class ActivityValueDefinitionsController : AuthorizedControllerBas
 {
     private readonly ISender _sender;
 
-    public ActivityValueDefinitionsController(ISender sender)
+    public ActivityValueDefinitionsController(ICurrentUserService currentUser, ISender sender) : base(currentUser)
     {
         _sender = sender;
     }
@@ -30,11 +32,15 @@ public sealed class ActivityValueDefinitionsController : AuthorizedControllerBas
     /// Lista las definiciones de valores de una actividad.
     /// </summary>
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<ActivityValueDefinitionResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll(Guid activityId, CancellationToken ct)
+    [ProducesResponseType(typeof(PaginatedResponse<ActivityValueDefinitionResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll(
+        Guid activityId,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = Pagination.DefaultPageSize,
+        CancellationToken ct = default)
     {
         var userId = GetUserId();
-        var result = await _sender.Send(new GetAllValueDefinitionsQuery(activityId, userId), ct);
+        var result = await _sender.Send(new GetAllValueDefinitionsQuery(activityId, userId, pageNumber, pageSize), ct);
         return result.ToActionResult();
     }
 

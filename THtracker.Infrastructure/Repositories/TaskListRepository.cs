@@ -1,6 +1,7 @@
 namespace THtracker.Infrastructure.Repositories;
 
 using Microsoft.EntityFrameworkCore;
+using THtracker.Domain.Common;
 using THtracker.Domain.Entities;
 using THtracker.Domain.Interfaces;
 using THtracker.Infrastructure.Persistence;
@@ -12,6 +13,22 @@ public class TaskListRepository : ITaskListRepository
     public TaskListRepository(AppDbContext context)
     {
         this.context = context;
+    }
+
+    public async Task<PagedList<TaskList>> GetPageByUserAsync(
+        Guid userId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = context.TaskLists.AsNoTracking().Where(t => t.UserId == userId);
+        var total = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderBy(t => t.Name)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+        return new PagedList<TaskList>(items, total);
     }
 
     public async Task<IEnumerable<TaskList>> GetAllByUserAsync(Guid userId, CancellationToken cancellationToken = default)

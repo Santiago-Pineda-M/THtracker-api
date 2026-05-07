@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using THtracker.Domain.Interfaces;
+using THtracker.Infrastructure.Options;
 using THtracker.Infrastructure.Persistence;
 using THtracker.Infrastructure.Repositories;
 using THtracker.Infrastructure.Services;
@@ -13,6 +14,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
+        services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("Default"))
         );

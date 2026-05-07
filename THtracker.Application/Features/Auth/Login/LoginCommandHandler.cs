@@ -14,6 +14,7 @@ public sealed class LoginCommandHandler : IRequestHandler<LoginCommand, Result<T
     private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly IUserSessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IClientIpProvider _clientIpProvider;
 
     public LoginCommandHandler(
         IUserRepository userRepository,
@@ -21,7 +22,8 @@ public sealed class LoginCommandHandler : IRequestHandler<LoginCommand, Result<T
         IJwtProvider jwtProvider,
         IRefreshTokenRepository refreshTokenRepository,
         IUserSessionRepository sessionRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IClientIpProvider clientIpProvider)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
@@ -29,6 +31,7 @@ public sealed class LoginCommandHandler : IRequestHandler<LoginCommand, Result<T
         _refreshTokenRepository = refreshTokenRepository;
         _sessionRepository = sessionRepository;
         _unitOfWork = unitOfWork;
+        _clientIpProvider = clientIpProvider;
     }
 
     public async Task<Result<TokenResponse>> Handle(LoginCommand request, CancellationToken cancellationToken)
@@ -40,9 +43,11 @@ public sealed class LoginCommandHandler : IRequestHandler<LoginCommand, Result<T
             return Result.Failure<TokenResponse>(new Error("Unauthorized", "Credenciales inválidas."));
         }
 
+        var clientIp = _clientIpProvider.GetClientIpAddress();
+
         var refreshTokenEntity = _jwtProvider.GenerateRefreshToken(
             user,
-            request.IpAddress,
+            clientIp,
             request.DeviceInfo
         );
         
@@ -53,7 +58,7 @@ public sealed class LoginCommandHandler : IRequestHandler<LoginCommand, Result<T
             refreshTokenEntity.Token,
             refreshTokenEntity.ExpiryDate,
             request.DeviceInfo,
-            request.IpAddress
+            clientIp
         );
         
         await _sessionRepository.AddAsync(userSession, cancellationToken);

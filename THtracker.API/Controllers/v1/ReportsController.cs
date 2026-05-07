@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using THtracker.API.Extensions;
+using THtracker.Application.Interfaces;
 using THtracker.Application.Features.Reports;
 using THtracker.Application.Features.Reports.Queries.GetActivityReport;
 
@@ -17,7 +18,7 @@ public sealed class ReportsController : AuthorizedControllerBase
 {
     private readonly ISender _sender;
 
-    public ReportsController(ISender sender)
+    public ReportsController(ICurrentUserService currentUser, ISender sender) : base(currentUser)
     {
         _sender = sender;
     }

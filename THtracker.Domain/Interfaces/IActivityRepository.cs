@@ -1,9 +1,16 @@
+using THtracker.Domain.Common;
 using THtracker.Domain.Entities;
 
 namespace THtracker.Domain.Interfaces;
 
 public interface IActivityRepository
 {
+    Task<PagedList<Activity>> GetPageByUserAsync(
+        Guid userId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
     Task<IEnumerable<Activity>> GetAllByUserAsync(
         Guid userId,
         CancellationToken cancellationToken = default

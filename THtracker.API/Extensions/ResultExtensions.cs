@@ -1,3 +1,4 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using THtracker.Domain.Common;
 
@@ -21,6 +22,8 @@ public static class ResultExtensions
     {
         if (result.IsSuccess)
         {
+            if (typeof(T) == typeof(Unit))
+                return new NoContentResult();
             return new OkObjectResult(result.Value!);
         }
 

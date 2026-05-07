@@ -17,6 +17,7 @@ public class LoginCommandHandlerTests
     private readonly Mock<IRefreshTokenRepository> _refreshTokenRepositoryMock;
     private readonly Mock<IUserSessionRepository> _sessionRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+    private readonly Mock<IClientIpProvider> _clientIpProviderMock;
     private readonly LoginCommandHandler _handler;
 
     public LoginCommandHandlerTests()
@@ -27,6 +28,8 @@ public class LoginCommandHandlerTests
         _refreshTokenRepositoryMock = new Mock<IRefreshTokenRepository>();
         _sessionRepositoryMock = new Mock<IUserSessionRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _clientIpProviderMock = new Mock<IClientIpProvider>();
+        _clientIpProviderMock.Setup(x => x.GetClientIpAddress()).Returns("127.0.0.1");
 
         _handler = new LoginCommandHandler(
             _userRepositoryMock.Object,
@@ -34,18 +37,19 @@ public class LoginCommandHandlerTests
             _jwtProviderMock.Object,
             _refreshTokenRepositoryMock.Object,
             _sessionRepositoryMock.Object,
-            _unitOfWorkMock.Object);
+            _unitOfWorkMock.Object,
+            _clientIpProviderMock.Object);
     }
 
     [Fact]
     public async Task Handle_ShouldReturnTokens_WhenCredentialsAreValid()
     {
         // Arrange
-        var command = new LoginCommand("test@example.com", "Password123!", "Chrome", "127.0.0.1");
+        var command = new LoginCommand("test@example.com", "Password123!", "Chrome");
         var user = new User("Test User", command.Email);
         user.SetPassword("hashed_password");
         
-        var refreshToken = new THtracker.Domain.Entities.RefreshToken("refresh_token", DateTime.UtcNow.AddDays(7), command.IpAddress, command.DeviceInfo, user.Id);
+        var refreshToken = new THtracker.Domain.Entities.RefreshToken("refresh_token", DateTime.UtcNow.AddDays(7), "127.0.0.1", command.DeviceInfo, user.Id);
 
         _userRepositoryMock.Setup(x => x.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
@@ -53,7 +57,7 @@ public class LoginCommandHandlerTests
         _passwordHasherMock.Setup(x => x.Verify(command.Password, user.PasswordHash!))
             .Returns(true);
 
-        _jwtProviderMock.Setup(x => x.GenerateRefreshToken(user, command.IpAddress, command.DeviceInfo))
+        _jwtProviderMock.Setup(x => x.GenerateRefreshToken(user, "127.0.0.1", command.DeviceInfo))
             .Returns(refreshToken);
 
         _jwtProviderMock.Setup(x => x.GenerateAccessToken(user, It.IsAny<Guid>()))
@@ -76,7 +80,7 @@ public class LoginCommandHandlerTests
     public async Task Handle_ShouldReturnFailure_WhenPasswordIsIncorrect()
     {
         // Arrange
-        var command = new LoginCommand("test@example.com", "WrongPassword", "Chrome", "127.0.0.1");
+        var command = new LoginCommand("test@example.com", "WrongPassword", "Chrome");
         var user = new User("Test User", command.Email);
         user.SetPassword("hashed_password");
 

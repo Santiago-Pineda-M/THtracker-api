@@ -32,12 +32,15 @@
 | Feature | Descripción |
 |---------|-------------|
 | 🔐 **Autenticación JWT** | Access tokens + Refresh tokens para sesiones seguras |
+| ♻️ **Rotación de Refresh Token** | En refresh se rota token y se actualiza la sesión existente |
+| 📄 **Paginación estándar** | Listados con `pageNumber` / `pageSize` y `PaginatedResponse<T>` |
 | 🏗️ **Clean Architecture** | 5 proyectos: Domain, Application, Infrastructure, API, Tests |
 | 📦 **Repository Pattern** | Abstracción completa de la capa de datos |
-| ✅ **Validaciones** | FluentValidation por entidad en la capa de Application |
+| ✅ **Validaciones** | FluentValidation + pipeline MediatR (`ValidationBehavior`) |
 | 🗄️ **ORM** | Entity Framework Core con Fluent API y migraciones |
 | 🧪 **Tests Unit + Integration** | Cobertura en todas las capas incluida la presentación |
 | 🔢 **API Versionada** | Endpoints bajo `/api/v1/` para compatibilidad futura |
+| 🛡️ **Hardening HTTP** | HSTS + security headers + rate limit en autenticación |
 | 🔄 **CI/CD** | Pipeline automatizado con GitHub Actions |
 | 🐳 **Docker** | Containerizado para deploy reproducible |
 | 📋 **Swagger** | Documentación de endpoints interactiva |
@@ -48,12 +51,13 @@
 
 ```
 Backend
-├── 🟣 .NET 8 / ASP.NET Core  — Framework web
+├── 🟣 .NET 10 / ASP.NET Core — Framework web
 ├── 🔷 C#                     — Lenguaje principal
 ├── 🗄️  Entity Framework Core  — ORM + Migraciones
 ├── 🐘 PostgreSQL              — Base de datos principal
 ├── 🔑 JWT Bearer              — Autenticación
-└── 📝 FluentValidation        — Validaciones de dominio
+├── 📝 FluentValidation        — Validaciones de requests
+└── 🔄 MediatR                 — CQRS + pipeline behaviors
 
 DevOps & Tooling
 ├── 🐳 Docker + Docker Compose — Containerización
@@ -77,12 +81,9 @@ THtracker.slnx
 │   └── Common/                    # Tipos base compartidos del dominio
 │
 ├── THtracker.Application/         # 🟡 Casos de uso y orquestación
-│   ├── UseCases/                  # Un caso de uso por feature
-│   │   └── [Activities|Tasks|Auth|Reports|Sessions...]
-│   ├── DTOs/                      # Objetos de transferencia por feature
-│   │   └── [Activities|Tasks|Auth|Users|Reports...]
-│   ├── Validators/                # FluentValidation por entidad
-│   │   └── [Activities|Tasks|Auth|Users...]
+│   ├── Features/                  # CQRS por feature (Commands/Queries + Handlers + Validators)
+│   │   └── [Activities|Tasks|Auth|Reports|UserSessions...]
+│   ├── Common/                    # Behaviors, paginación y utilidades transversales
 │   ├── Interfaces/                # Contratos de servicios de aplicación
 │   └── Constants/                 # Constantes de la capa de aplicación
 │
@@ -129,7 +130,7 @@ THtracker.API
 ## 🚀 Inicio Rápido
 
 ### Prerrequisitos
-- [.NET 8 SDK](https://dotnet.microsoft.com/download)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download)
 - [Docker](https://www.docker.com/get-started) (para PostgreSQL local)
 - [EF Core CLI](https://docs.microsoft.com/en-us/ef/core/cli/dotnet): `dotnet tool install --global dotnet-ef`
 
@@ -171,12 +172,14 @@ dotnet run
 // appsettings.json (fragmento)
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Database=thtracker;Username=postgres;Password=tu_password"
+    "Default": "Host=localhost;Database=thtracker;Username=postgres;Password=tu_password"
   },
-  "JwtSettings": {
-    "Secret": "tu_clave_secreta_min_32_chars",
-    "ExpiresInMinutes": 60,
-    "RefreshTokenExpiresInDays": 7
+  "Jwt": {
+    "SecretKey": "tu_clave_secreta_min_32_chars",
+    "Issuer": "https://tu-dominio.com",
+    "Audience": "https://tu-dominio.com",
+    "AccessTokenExpirationMinutes": 15,
+    "RefreshTokenExpirationDays": 7
   }
 }
 ```
@@ -187,17 +190,29 @@ dotnet run
 
 | Método | Endpoint | Descripción | Auth |
 |--------|----------|-------------|------|
-| `POST` | `/api/auth/register` | Registro de usuario | ❌ |
-| `POST` | `/api/auth/login` | Inicio de sesión | ❌ |
-| `POST` | `/api/auth/refresh` | Renovar access token | ❌ |
-| `GET` | `/api/activities` | Listar actividades | ✅ |
-| `POST` | `/api/activities` | Crear actividad | ✅ |
-| `PUT` | `/api/activities/{id}` | Actualizar actividad | ✅ |
-| `DELETE` | `/api/activities/{id}` | Eliminar actividad | ✅ |
-| `GET` | `/api/tasks` | Listar tareas | ✅ |
-| `POST` | `/api/tasks` | Crear tarea | ✅ |
+| `POST` | `/api/v1/auth/register` | Registro de usuario (retorna 201) | ❌ |
+| `POST` | `/api/v1/auth/login` | Inicio de sesión | ❌ |
+| `POST` | `/api/v1/auth/refresh` | Renovar access token (rota refresh token y actualiza sesión) | ❌ |
+| `GET` | `/api/v1/sessions` | Listar sesiones activas del usuario autenticado (paginado) | ✅ |
+| `POST` | `/api/v1/sessions/{sessionId}/revoke` | Revocar una sesión propia | ✅ |
+| `GET` | `/api/v1/activity-logs` | Listar logs de actividad con filtros + paginación | ✅ |
+| `GET` | `/api/v1/activity-logs/active` | Listar solo logs activos | ✅ |
+| `GET` | `/api/v1/health` | Estado general sin detalles | ❌ |
+| `GET` | `/api/v1/health/details` | Estado detallado (solo Admin) | ✅ |
 
 > 📖 Documentación completa disponible en `/swagger` una vez levantada la API.
+
+### Contrato de Refresh Token
+
+`POST /api/v1/auth/refresh` espera body JSON:
+
+```json
+{
+  "refreshToken": "token_actual"
+}
+```
+
+No se envía un string plano en el body.
 
 ---
 
@@ -224,8 +239,8 @@ docker build -t thtracker-api .
 
 # Ejecutar el contenedor
 docker run -p 5000:5000 \
-  -e ConnectionStrings__DefaultConnection="..." \
-  -e JwtSettings__Secret="..." \
+  -e ConnectionStrings__Default="..." \
+  -e Jwt__SecretKey="..." \
   thtracker-api
 
 # Con Docker Compose (incluye PostgreSQL)

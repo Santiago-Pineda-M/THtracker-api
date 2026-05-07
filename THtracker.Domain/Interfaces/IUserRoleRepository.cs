@@ -1,9 +1,16 @@
+using THtracker.Domain.Common;
 using THtracker.Domain.Entities;
 
 namespace THtracker.Domain.Interfaces;
 
 public interface IUserRoleRepository
 {
+    Task<PagedList<Role>> GetRolesPageByUserAsync(
+        Guid userId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
     Task<IEnumerable<Role>> GetRolesByUserAsync(
         Guid userId,
         CancellationToken cancellationToken = default

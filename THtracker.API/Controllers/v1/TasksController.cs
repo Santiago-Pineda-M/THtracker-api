@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using THtracker.API.Extensions;
+using THtracker.Application.Common;
+using THtracker.Application.Interfaces;
 using THtracker.Application.Features.Tasks;
 using THtracker.Application.Features.Tasks.Commands.CreateTask;
 using THtracker.Application.Features.Tasks.Commands.UpdateTask;
@@ -19,18 +21,22 @@ public sealed class TasksController : AuthorizedControllerBase
 {
     private readonly ISender _sender;
 
-    public TasksController(ISender sender)
+    public TasksController(ICurrentUserService currentUser, ISender sender) : base(currentUser)
     {
         _sender = sender;
     }
 
     [HttpGet("by-task-list/{taskListId:guid}")]
-    [ProducesResponseType(typeof(IEnumerable<TaskResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PaginatedResponse<TaskResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetAllByTaskList(Guid taskListId, CancellationToken ct)
+    public async Task<IActionResult> GetAllByTaskList(
+        Guid taskListId,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = Pagination.DefaultPageSize,
+        CancellationToken ct = default)
     {
         var userId = GetUserId();
-        var result = await _sender.Send(new GetAllTasksByTaskListQuery(taskListId, userId), ct);
+        var result = await _sender.Send(new GetAllTasksByTaskListQuery(taskListId, userId, pageNumber, pageSize), ct);
         return result.ToActionResult();
     }
 
